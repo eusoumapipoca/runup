@@ -1,0 +1,63 @@
+name: Atualizar dashboard
+
+on:
+  schedule:
+    # Segundas-feiras às 07:00 UTC (08:00 em Lisboa no inverno, 08:00 BST no verão).
+    # O GitHub usa sempre UTC; a hora local varia com a mudança de hora.
+    - cron: "0 7 * * 1"
+  workflow_dispatch:        # permite correr à mão pelo separador Actions
+
+permissions:
+  contents: write           # necessário para o commit do index.html
+
+concurrency:
+  group: dashboard
+  cancel-in-progress: false
+
+jobs:
+  atualizar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Obter o repositório
+        uses: actions/checkout@v4
+
+      - name: Instalar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Instalar dependências
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas pandas_market_calendars yfinance requests lxml openpyxl
+
+      - name: Gerar o dashboard
+        env:
+          FINNHUB_TOKEN: ${{ secrets.FINNHUB_TOKEN }}
+        run: |
+          python earnings_runup.py --weeks 8 --html index.html
+
+      - name: Verificar que o HTML não leva valores monetários
+        # Rede de segurança: o repositório é público. Se alguma vez um campo
+        # em euros escapar ao filtro, o workflow falha em vez de publicar.
+        run: |
+          if grep -qE '"(sleeve_eur|retorno_eur|valor_investido_eur|posicao_eur|resultado_total_eur|n_acoes|preco_entrada_usd)"' index.html; then
+            echo "ERRO: encontrado campo monetário no HTML público."
+            exit 1
+          fi
+          echo "HTML limpo."
+
+      - name: Publicar se houve alterações
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          if git diff --staged --quiet; then
+            echo "Sem alterações — nada a publicar."
+          else
+            git commit -m "Dashboard: $(date -u +%Y-%m-%d)"
+            git push
+          fi
