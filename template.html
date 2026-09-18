@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Earnings Runup · Confluens</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --papel:#F4F2E9;
+  --listra:#DCE7D5;
+  --tinta:#1B241C;
+  --tinta-fraca:#5C6B5E;
+  --linha:#A9B6A4;
+  --linha-forte:#5C6B5E;
+  --ganho:#2C6B41;
+  --perda:#A8392C;
+  --aviso:#9A6B10;
+  --furo:#C9C6BA;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--papel); color:var(--tinta);
+  font:400 14px/1.55 "IBM Plex Mono", ui-monospace, "SFMono-Regular",
+       Menlo, Consolas, monospace;
+  padding:0 0 64px;
+}
+.folha{max-width:1120px; margin:0 auto; padding:0 34px; position:relative}
+/* furos de arrastamento do papel contínuo */
+.folha::before,.folha::after{
+  content:""; position:absolute; top:0; bottom:0; width:22px;
+  background-image:radial-gradient(circle at 11px 11px, var(--furo) 3.5px, transparent 4px);
+  background-size:22px 34px; opacity:.85; pointer-events:none;
+}
+.folha::before{left:2px} .folha::after{right:2px}
+@media(max-width:760px){ .folha::before,.folha::after{display:none} .folha{padding:0 14px} }
+
+/* ---------- cabecalho ---------- */
+header{padding:34px 0 18px; border-bottom:2px solid var(--tinta)}
+.marca{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap}
+.marca a{color:var(--tinta-fraca); text-decoration:none; border-bottom:1px dotted var(--linha)}
+.marca a:hover{color:var(--tinta)}
+h1{font-size:26px; font-weight:600; margin:0; letter-spacing:-.01em}
+.linha-meta{
+  display:flex; gap:10px 26px; flex-wrap:wrap; margin-top:12px;
+  color:var(--tinta-fraca); font-size:12.5px;
+}
+.selo{
+  display:inline-block; padding:2px 9px; border:1px solid currentColor;
+  font-size:11.5px; font-weight:500;
+}
+.selo.ok{color:var(--ganho)} .selo.alerta{color:var(--aviso)}
+
+/* ---------- seccoes ---------- */
+section{padding:34px 0; border-bottom:1px solid var(--linha)}
+h2{font-size:15px; font-weight:600; margin:0 0 4px; letter-spacing:.01em}
+.sub{color:var(--tinta-fraca); font-size:12.5px; margin:0 0 20px; max-width:68ch}
+
+/* ---------- linha temporal (heroi) ---------- */
+.timeline{width:100%; overflow-x:auto}
+.timeline svg{display:block; min-width:640px}
+.tl-nome{font-size:12.5px; font-weight:600; fill:var(--tinta)}
+.tl-eixo{font-size:11px; fill:var(--tinta-fraca)}
+.tl-hoje{stroke:var(--perda); stroke-width:1.5; stroke-dasharray:3 3}
+.tl-hoje-txt{font-size:10.5px; fill:var(--perda); font-weight:600}
+
+/* ---------- fichas ---------- */
+.fichas{display:grid; gap:18px; grid-template-columns:repeat(auto-fill,minmax(330px,1fr))}
+.ficha{border:2px solid var(--tinta); background:var(--papel)}
+.ficha-topo{
+  display:flex; justify-content:space-between; align-items:baseline;
+  padding:12px 16px; border-bottom:1px solid var(--tinta); background:var(--listra);
+}
+.ticker{font-size:22px; font-weight:600; letter-spacing:.02em}
+.dias{font-size:12px; color:var(--tinta-fraca); text-align:right}
+.dias b{display:block; font-size:19px; color:var(--tinta); font-weight:600}
+.ficha dl{margin:0; padding:14px 16px; display:grid; grid-template-columns:1fr auto; gap:7px 14px}
+.ficha dt{color:var(--tinta-fraca); font-size:12.5px}
+.ficha dd{margin:0; text-align:right; font-variant-numeric:tabular-nums}
+.ficha-rodape{padding:12px 16px; border-top:1px dashed var(--linha); font-size:12px}
+.verif{display:flex; gap:8px; flex-wrap:wrap; margin-top:8px}
+.verif a{
+  color:var(--tinta); text-decoration:none; border:1px solid var(--linha-forte);
+  padding:3px 9px; font-size:11.5px;
+}
+.verif a:hover{background:var(--tinta); color:var(--papel)}
+.vazio{
+  border:1px dashed var(--linha); padding:26px; text-align:center;
+  color:var(--tinta-fraca); font-size:13px;
+}
+
+/* ---------- tabelas ---------- */
+.rolo{overflow-x:auto}
+table{border-collapse:collapse; width:100%; font-size:12.5px; min-width:620px}
+th{
+  text-align:left; font-weight:600; padding:7px 10px; white-space:nowrap;
+  border-bottom:2px solid var(--tinta);
+}
+td{padding:6px 10px; border-bottom:1px solid rgba(169,182,164,.45); font-variant-numeric:tabular-nums}
+tbody tr:nth-child(odd){background:var(--listra)}
+th.n, td.n{text-align:right}
+.falha{color:var(--tinta-fraca)}
+.motivo{
+  display:inline-block; border:1px solid var(--perda); color:var(--perda);
+  padding:0 5px; margin:1px 3px 1px 0; font-size:11px;
+}
+.pos{color:var(--ganho)} .neg{color:var(--perda)}
+tr.aberto td{background:repeating-linear-gradient(45deg,transparent,transparent 6px,rgba(154,107,16,.09) 6px,rgba(154,107,16,.09) 12px)}
+tr.expansivel{cursor:pointer}
+tr.expansivel:hover td{background:var(--listra)}
+.nota-linha td{
+  background:var(--papel)!important; border-bottom:1px solid var(--linha);
+  color:var(--tinta-fraca); font-size:12px; white-space:pre-wrap; padding:12px 14px;
+}
+
+/* ---------- controlos ---------- */
+.filtros{display:flex; gap:0; margin-bottom:18px; flex-wrap:wrap}
+.filtros button{
+  font:inherit; font-size:12.5px; background:var(--papel); color:var(--tinta-fraca);
+  border:1px solid var(--linha-forte); border-right:none; padding:5px 14px; cursor:pointer;
+}
+.filtros button:last-child{border-right:1px solid var(--linha-forte)}
+.filtros button[aria-pressed="true"]{background:var(--tinta); color:var(--papel); font-weight:600}
+
+/* ---------- resumo ---------- */
+.metricas{display:grid; gap:0; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); border:1px solid var(--linha-forte)}
+.metrica{padding:14px 16px; border-right:1px solid var(--linha-forte)}
+.metrica:last-child{border-right:none}
+.metrica .rot{color:var(--tinta-fraca); font-size:11.5px}
+.metrica .val{font-size:24px; font-weight:600; font-variant-numeric:tabular-nums; margin-top:3px}
+.metrica .pe{font-size:11.5px; color:var(--tinta-fraca)}
+@media(max-width:700px){ .metrica{border-right:none; border-bottom:1px solid var(--linha-forte)} }
+
+.barra-amostra{margin-top:20px; border:1px solid var(--linha-forte); padding:13px 16px}
+.barra-fundo{height:9px; background:var(--listra); margin:9px 0 7px; position:relative}
+.barra-frente{height:100%; background:var(--tinta)}
+
+/* ---------- funil ---------- */
+.funil{display:grid; gap:5px; max-width:640px}
+.fase{display:grid; grid-template-columns:170px 1fr 84px; align-items:center; gap:12px; font-size:12.5px}
+.fase-barra{height:19px; background:var(--listra); border:1px solid var(--linha-forte)}
+.fase-cheia{height:100%; background:var(--tinta)}
+.fase .n{text-align:right; font-variant-numeric:tabular-nums; color:var(--tinta-fraca)}
+
+/* ---------- regras ---------- */
+.regras{columns:2; column-gap:44px; font-size:12.5px; color:var(--tinta-fraca); max-width:760px}
+.regras div{break-inside:avoid; padding:3px 0; display:flex; justify-content:space-between; gap:16px;
+  border-bottom:1px dotted var(--linha)}
+.regras b{font-weight:500; color:var(--tinta); font-variant-numeric:tabular-nums}
+@media(max-width:620px){ .regras{columns:1} }
+
+footer{padding:26px 0 0; color:var(--tinta-fraca); font-size:12px; display:flex;
+  justify-content:space-between; gap:16px; flex-wrap:wrap}
+footer a{color:var(--tinta-fraca)}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="folha">
+
+<header>
+  <div class="marca">
+    <h1>Earnings Runup</h1>
+    <a href="https://confluens.carrd.co/">Confluens</a>
+  </div>
+  <div class="linha-meta" id="meta"></div>
+</header>
+
+<section>
+  <h2>Janelas de entrada e saída</h2>
+  <p class="sub">Cada barra é o intervalo em que se pode comprar. O losango marca a
+     venda obrigatória, na véspera da apresentação de resultados.</p>
+  <div class="timeline" id="timeline"></div>
+</section>
+
+<section>
+  <h2>Em janela hoje</h2>
+  <p class="sub" id="sub-janela"></p>
+  <div id="fichas"></div>
+</section>
+
+<section>
+  <h2>Histórico</h2>
+  <p class="sub">Os trades da v1 foram feitos com filtros de entrada diferentes.
+     Não são comparáveis com os da v2.</p>
+  <div class="filtros" id="filtros-versao"></div>
+  <div id="resumo"></div>
+  <div id="acumulado"></div>
+  <div class="rolo" id="tab-trades"></div>
+</section>
+
+<section>
+  <h2>Todos os candidatos</h2>
+  <p class="sub">Inclui os que foram eliminados, com o filtro que os cortou.</p>
+  <div class="filtros" id="filtros-cand"></div>
+  <div class="rolo" id="tab-cand"></div>
+</section>
+
+<section>
+  <h2>Funil de seleção</h2>
+  <p class="sub">Quantos nomes sobreviveram a cada fase.</p>
+  <div class="funil" id="funil"></div>
+</section>
+
+<section style="border-bottom:none">
+  <h2>Regras em vigor</h2>
+  <p class="sub">Os limiares com que esta corrida foi feita.</p>
+  <div class="regras" id="regras"></div>
+</section>
+
+<footer>
+  <span id="rodape-ger"></span>
+  <span>Registo pessoal. Não é recomendação de investimento.</span>
+</footer>
+
+</div>
+
+<script>
+const D = __DADOS__;
+
+/* ---------- utilitarios ---------- */
+const MESES = ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
+const dt = s => s ? new Date(s + "T00:00:00") : null;
+const fdata = s => { const d = dt(s); return d ? `${d.getDate()} ${MESES[d.getMonth()]}` : "—"; };
+const fdataLonga = s => { const d = dt(s); return d ? `${d.getDate()} ${MESES[d.getMonth()]} ${d.getFullYear()}` : "—"; };
+const num = (v, c = 2, suf = "") => (v === null || v === undefined || v === "") ? "—" : (+v).toFixed(c) + suf;
+const pct = (v, c = 1) => (v === null || v === undefined || v === "") ? "—" : (v > 0 ? "+" : "") + (+v).toFixed(c) + "%";
+const sinal = v => (v === null || v === undefined) ? "" : (v > 0 ? "pos" : (v < 0 ? "neg" : ""));
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const el = (id, html) => { const n = document.getElementById(id); if (n) n.innerHTML = html; };
+const dias = (a, b) => { const x = dt(a), y = dt(b); return (x && y) ? Math.round((y - x) / 864e5) : null; };
+
+const hoje = D.meta.data_corrida;
+const aprovados = D.candidatos.filter(c => c.estado === "OK");
+const emJanela = aprovados.filter(c => c.janela_aberta_hoje);
+
+/* ---------- cabecalho ---------- */
+(function () {
+  const m = D.meta;
+  const fresco = m.dados_frescos !== false;
+  el("meta", `
+    <span>Corrida de ${fdataLonga(m.data_corrida)}</span>
+    <span>${m.semanas_analisadas} semanas analisadas</span>
+    <span class="selo ${fresco ? "ok" : "alerta"}">${fresco
+      ? "Preços atualizados"
+      : `Preços com ${m.sessoes_de_atraso} sessão(ões) de atraso`}</span>`);
+  el("rodape-ger", `Gerado em ${fdataLonga(m.data_corrida)} · <a href="https://confluens.carrd.co/">confluens</a>`);
+})();
+
+/* ---------- linha temporal ---------- */
+(function () {
+  const alvo = document.getElementById("timeline");
+  const lista = aprovados.filter(c => c.T_minus_15 && c.data_saida).slice(0, 12);
+  if (!lista.length) { alvo.innerHTML = `<div class="vazio">Sem candidatos aprovados nesta corrida.</div>`; return; }
+
+  const datas = lista.flatMap(c => [dt(c.T_minus_15), dt(c.data_saida)]).concat([dt(hoje)]);
+  const min = new Date(Math.min(...datas)), max = new Date(Math.max(...datas));
+  const pad = 3 * 864e5;
+  const t0 = +min - pad, t1 = +max + pad;
+  const L = 178, R = 26, H = 34, topo = 30;
+  const W = 980, alt = topo + lista.length * H + 34;
+  const x = t => L + ((t - t0) / (t1 - t0)) * (W - L - R);
+
+  let s = `<svg viewBox="0 0 ${W} ${alt}" role="img" aria-label="Janelas de entrada e datas de saída">`;
+
+  // escala mensal
+  const xhoje = x(+dt(hoje));
+  const cur = new Date(min.getFullYear(), min.getMonth(), 1);
+  while (+cur <= t1) {
+    if (+cur >= t0) {
+      const xc = x(+cur);
+      s += `<line x1="${xc}" y1="${topo - 12}" x2="${xc}" y2="${alt - 26}"
+             stroke="var(--linha)" stroke-width="1"/>`;
+      // o rotulo do mes cede o lugar a marca de hoje quando se sobrepoem
+      if (Math.abs(xc - xhoje) > 26) {
+        s += `<text class="tl-eixo" x="${xc + 4}" y="${alt - 12}">${MESES[cur.getMonth()]}</text>`;
+      }
+    }
+    cur.setMonth(cur.getMonth() + 1);
+  }
+
+  lista.forEach((c, i) => {
+    const y = topo + i * H;
+    const a = x(+dt(c.T_minus_15)), b = x(+dt(c.T_minus_12)), f = x(+dt(c.data_saida));
+    s += `<text class="tl-nome" x="0" y="${y + 15}">${esc(c.ticker)}</text>`;
+    s += `<line x1="${b}" y1="${y + 10}" x2="${f}" y2="${y + 10}"
+           stroke="var(--linha-forte)" stroke-width="1" stroke-dasharray="2 3"/>`;
+    s += `<rect x="${a}" y="${y + 3}" width="${Math.max(b - a, 3)}" height="15"
+           fill="${c.janela_aberta_hoje ? "var(--ganho)" : "var(--listra)"}"
+           stroke="var(--tinta)" stroke-width="1"/>`;
+    s += `<path d="M${f} ${y + 3} L${f + 7} ${y + 10.5} L${f} ${y + 18} L${f - 7} ${y + 10.5} Z"
+           fill="var(--papel)" stroke="var(--tinta)" stroke-width="1.5"/>`;
+    s += `<text class="tl-eixo" x="${f + 12}" y="${y + 14}">${fdata(c.data_saida)}</text>`;
+  });
+
+  s += `<line class="tl-hoje" x1="${xhoje}" y1="${topo - 16}" x2="${xhoje}" y2="${alt - 14}"/>
+        <text class="tl-hoje-txt" x="${xhoje + 4}" y="${alt - 12}">hoje</text></svg>`;
+  alvo.innerHTML = s;
+})();
+
+/* ---------- fichas dos candidatos em janela ---------- */
+(function () {
+  const sub = document.getElementById("sub-janela");
+  if (!emJanela.length) {
+    sub.textContent = "";
+    el("fichas", `<div class="vazio">Nenhum candidato em janela esta semana.
+      É um resultado válido: a estratégia só paga por seleção, não por atividade.</div>`);
+    return;
+  }
+  sub.textContent = "Falta confirmar o Zacks Rank e a data na página de relação com investidores. "
+    + "Só depois disso é que um candidato é elegível.";
+
+  el("fichas", `<div class="fichas">` + emJanela.map(c => {
+    const dsaida = dias(hoje, c.data_saida);
+    const dim = c.dimensionamento || {};
+    const linhas = [
+      ["Anúncio", `${fdata(c.data_anuncio)} · ${(c.hora || "?").toUpperCase()}`],
+      ["Saída obrigatória", fdata(c.data_saida)],
+      ["Distância ao stop", num(dim.distancia_stop_pct ?? c.distancia_stop_pct, 2, "%")],
+      ["Beta", num(c.beta)],
+      ["Queda desde o máximo", num(c["drawdown_52s_%"], 1, "%")],
+      ["Movimento médio nos resultados", num(c["mov_historico_%"], 1, "%")],
+    ];
+    return `<article class="ficha">
+      <div class="ficha-topo">
+        <span class="ticker">${esc(c.ticker)}</span>
+        <span class="dias">sai em<b>${dsaida === null ? "—" : dsaida + " d"}</b></span>
+      </div>
+      <dl>${linhas.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl>
+      <div class="ficha-rodape">
+        Aplica a percentagem do stop ao preço real de execução, não a um valor fixo.
+        <div class="verif">
+          <a href="https://www.zacks.com/stock/quote/${encodeURIComponent(c.ticker)}"
+             target="_blank" rel="noopener">Zacks Rank</a>
+          <a href="https://www.google.com/search?q=${encodeURIComponent(c.ticker + " investor relations earnings date")}"
+             target="_blank" rel="noopener">Confirmar data</a>
+        </div>
+      </div>
+    </article>`;
+  }).join("") + `</div>`);
+})();
+
+/* ---------- historico ---------- */
+(function () {
+  const H = D.historico;
+  if (!H || !H.trades || !H.trades.length) {
+    el("resumo", `<div class="vazio">Ainda sem trades registados.</div>`);
+    return;
+  }
+  const versoes = Object.keys(H.resumo_por_versao || {});
+  let sel = H.versao_atual || versoes[versoes.length - 1] || "todas";
+
+  el("filtros-versao", versoes.map(v =>
+    `<button data-v="${v}" aria-pressed="${v === sel}">${v}</button>`).join("")
+    + `<button data-v="todas" aria-pressed="${sel === "todas"}">todas</button>`);
+
+  function trades(v) {
+    return v === "todas" ? H.trades : H.trades.filter(t => t.versao_sistema === v);
+  }
+
+  function pinta(v) {
+    const r = (v === "todas" ? H.resumo_todas : H.resumo_por_versao[v]) || {};
+    const ts = trades(v);
+
+    el("resumo", `<div class="metricas">
+      ${[["Retorno médio", pct(r.retorno_medio_pct), `${r.n_fechados || 0} trades fechados`, sinal(r.retorno_medio_pct)],
+         ["Alfa médio", pct(r.alfa_medio_pct), r.alfa_medio_pct === null || r.alfa_medio_pct === undefined
+            ? "falta o retorno do índice" : (r.alfa_medio_pct > 0 ? "acima do índice" : "abaixo do índice"),
+            sinal(r.alfa_medio_pct)],
+         ["Taxa de acerto", r.taxa_acerto_pct === null || r.taxa_acerto_pct === undefined
+            ? "—" : num(r.taxa_acerto_pct, 0, "%"), "trades positivos", ""],
+         ["Ganho médio", pct(r.ganho_medio_pct), "só os positivos", "pos"],
+         ["Perda média", pct(r.perda_media_pct), "só os negativos", "neg"],
+         ["Dias em posição", num(r.dias_medios, 0), "média", ""],
+        ].map(([rot, val, pe, cls]) =>
+          `<div class="metrica"><div class="rot">${rot}</div>
+           <div class="val ${val === "—" ? "" : cls}">${val}</div>
+           <div class="pe">${pe}</div></div>`).join("")}
+    </div>
+    <div class="barra-amostra">
+      <div>${r.amostra_suficiente
+        ? `Veredicto: <b>${r.veredicto}</b>`
+        : `Faltam ${r.faltam_para_30} trades fechados para os critérios de falsificação terem significado.`}</div>
+      <div class="barra-fundo"><div class="barra-frente"
+        style="width:${Math.min(100, ((r.n_fechados || 0) / 30) * 100)}%"></div></div>
+      <div class="pe" style="font-size:11.5px;color:var(--tinta-fraca)">
+        ${r.n_fechados || 0} de 30${Object.keys(r.por_motivo || {}).length
+          ? " · saídas: " + Object.entries(r.por_motivo).map(([k, n]) => `${k} ${n}`).join(", ") : ""}
+      </div>
+    </div>`);
+
+    // retorno acumulado
+    const fech = ts.filter(t => t.fechado && t.retorno_pct !== null)
+      .sort((a, b) => (a.data_saida_real || "").localeCompare(b.data_saida_real || ""));
+    const alvo = document.getElementById("acumulado");
+    if (fech.length < 2) {
+      alvo.innerHTML = `<p class="sub" style="margin:20px 0 0">Poucos trades fechados para traçar a evolução.</p>`;
+    } else {
+      let acc = 0; const pts = fech.map(t => (acc += t.retorno_pct));
+      const W = 900, Hh = 170, P = 34;
+      const mx = Math.max(...pts, 0), mn = Math.min(...pts, 0);
+      const yy = v => Hh - P - ((v - mn) / ((mx - mn) || 1)) * (Hh - 2 * P);
+      const xx = i => P + (i / ((pts.length - 1) || 1)) * (W - 2 * P);
+      alvo.innerHTML = `<div style="margin-top:26px"><svg viewBox="0 0 ${W} ${Hh}" style="width:100%;display:block">
+        <line x1="${P}" y1="${yy(0)}" x2="${W - P}" y2="${yy(0)}" stroke="var(--linha)" stroke-dasharray="3 3"/>
+        <polyline fill="none" stroke="var(--tinta)" stroke-width="2"
+          points="${pts.map((v, i) => `${xx(i)},${yy(v)}`).join(" ")}"/>
+        ${pts.map((v, i) => `<circle cx="${xx(i)}" cy="${yy(v)}" r="3.5"
+           fill="${v >= 0 ? "var(--ganho)" : "var(--perda)"}"/>
+          <text x="${xx(i)}" y="${yy(v) - 11}" text-anchor="middle"
+           style="font-size:11px;fill:var(--tinta-fraca)">${esc(fech[i].ticker)}</text>`).join("")}
+        <text x="${P}" y="16" style="font-size:11px;fill:var(--tinta-fraca)">retorno acumulado, %</text>
+      </svg></div>`;
+    }
+
+    // tabela
+    el("tab-trades", `<table><thead><tr>
+      <th>Ticker</th><th>v</th><th>Entrada</th><th>Saída</th><th class="n">Dias</th>
+      <th class="n">Retorno</th><th class="n">Índice</th><th class="n">Alfa</th><th>Motivo</th>
+      </tr></thead><tbody>${ts.map((t, i) => `
+      <tr class="expansivel ${t.fechado ? "" : "aberto"}" data-i="${i}">
+        <td><b>${esc(t.ticker)}</b></td>
+        <td>${esc(t.versao_sistema || "—")}</td>
+        <td>${fdata(t.data_entrada)}</td>
+        <td>${t.fechado ? fdata(t.data_saida_real) : "em curso"}</td>
+        <td class="n">${num(t.dias_em_posicao, 0)}</td>
+        <td class="n ${sinal(t.retorno_pct)}">${pct(t.retorno_pct)}</td>
+        <td class="n">${pct(t.retorno_spy_pct)}</td>
+        <td class="n ${sinal(t.alfa_pct)}">${pct(t.alfa_pct)}</td>
+        <td>${esc(t.motivo_saida || "—")}</td></tr>
+      <tr class="nota-linha" data-nota="${i}" hidden><td colspan="9">${
+        esc([t.setor && `Setor: ${t.setor}`, t.beta !== null && t.beta !== undefined && `Beta: ${t.beta}`,
+             t.nota].filter(Boolean).join("\n"))}</td></tr>`).join("")}</tbody></table>`);
+
+    document.querySelectorAll("#tab-trades tr.expansivel").forEach(tr => {
+      tr.addEventListener("click", () => {
+        const n = document.querySelector(`#tab-trades tr[data-nota="${tr.dataset.i}"]`);
+        if (n) n.hidden = !n.hidden;
+      });
+    });
+  }
+
+  document.querySelectorAll("#filtros-versao button").forEach(b => {
+    b.addEventListener("click", () => {
+      document.querySelectorAll("#filtros-versao button")
+        .forEach(o => o.setAttribute("aria-pressed", o === b));
+      pinta(b.dataset.v);
+    });
+  });
+  pinta(sel);
+})();
+
+/* ---------- tabela de candidatos ---------- */
+(function () {
+  let modo = "aprovados";
+  el("filtros-cand", `
+    <button data-m="aprovados" aria-pressed="true">Aprovados</button>
+    <button data-m="janela" aria-pressed="false">Em janela</button>
+    <button data-m="todos" aria-pressed="false">Todos</button>`);
+
+  function pinta() {
+    const lista = modo === "todos" ? D.candidatos
+      : modo === "janela" ? emJanela : aprovados;
+    if (!lista.length) { el("tab-cand", `<div class="vazio">Sem candidatos nesta vista.</div>`); return; }
+    el("tab-cand", `<table><thead><tr>
+      <th>Ticker</th><th>Anúncio</th><th>Hora</th><th>Saída</th><th class="n">Stop</th>
+      <th class="n">Beta</th><th class="n">Queda 52s</th><th class="n">Mov. resultados</th><th>Filtros</th>
+      </tr></thead><tbody>${lista.map(c => {
+        const dim = c.dimensionamento || {};
+        return `<tr class="${c.estado === "OK" ? "" : "falha"}">
+          <td><b>${esc(c.ticker)}</b></td>
+          <td>${fdata(c.data_anuncio)}</td>
+          <td>${esc((c.hora || "—").toUpperCase())}</td>
+          <td>${fdata(c.data_saida)}</td>
+          <td class="n">${num(dim.distancia_stop_pct ?? c.distancia_stop_pct, 1, "%")}</td>
+          <td class="n">${num(c.beta)}</td>
+          <td class="n">${num(c["drawdown_52s_%"], 1, "%")}</td>
+          <td class="n">${num(c["mov_historico_%"], 1, "%")}</td>
+          <td>${(c.motivo && c.motivo.length)
+            ? c.motivo.map(m => `<span class="motivo">${esc(m)}</span>`).join("")
+            : "passou"}</td></tr>`;
+      }).join("")}</tbody></table>`);
+  }
+  document.querySelectorAll("#filtros-cand button").forEach(b => {
+    b.addEventListener("click", () => {
+      modo = b.dataset.m;
+      document.querySelectorAll("#filtros-cand button")
+        .forEach(o => o.setAttribute("aria-pressed", o === b));
+      pinta();
+    });
+  });
+  pinta();
+})();
+
+/* ---------- funil ---------- */
+(function () {
+  const f = D.funil || {};
+  const fases = [["Universo", f.universo], ["Com anúncio na janela", f.com_anuncio],
+    ["Com histórico de preços", f.com_precos], ["Perto da janela", f.perto_da_janela],
+    ["Histórico consultado", f.historico_consultado], ["Aprovados", f.aprovados]];
+  const topo = fases[0][1] || 1;
+  el("funil", fases.map(([n, v], i) => {
+    const p = ((v || 0) / topo) * 100;
+    const ant = i ? fases[i - 1][1] : null;
+    const sobre = (ant && v !== undefined) ? Math.round((v / ant) * 100) + "%" : "";
+    return `<div class="fase"><span>${n}</span>
+      <span class="fase-barra"><span class="fase-cheia" style="width:${Math.max(p, .4)}%"></span></span>
+      <span class="n">${v ?? "—"} ${sobre ? `<span style="opacity:.6">${sobre}</span>` : ""}</span></div>`;
+  }).join(""));
+})();
+
+/* ---------- regras ---------- */
+(function () {
+  const r = D.regras || {}, c = D.capital || {};
+  const itens = [
+    ["Janela de entrada", r.entrada_sessoes_antes ? `T-${r.entrada_sessoes_antes[0]} a T-${r.entrada_sessoes_antes[1]}` : "—"],
+    ["Stop", r.atr_mult_stop ? `${r.atr_mult_stop} × ATR(14)` : "—"],
+    ["Beta máximo", num(r.beta_max)],
+    ["Queda máxima desde o máximo de 52 semanas", num(r.max_drawdown_52s_pct, 0, "%")],
+    ["Movimento médio máximo nos resultados", num(r.max_movimento_historico_pct, 0, "%")],
+    ["Gap negativo máximo no último anúncio", num(r.max_gap_negativo_pct, 0, "%")],
+    ["Risco por trade", num(c.risco_por_trade_pct, 2, "% do capital")],
+    ["Máximo por posição", num(c.tecto_posicao_pct, 0, "% do capital")],
+    ["Máximo em posições simultâneas", num(c.limite_agregado_pct, 0, "% do capital")],
+  ];
+  el("regras", itens.map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join(""));
+})();
+</script>
+</body>
+</html>

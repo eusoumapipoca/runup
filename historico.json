@@ -1,0 +1,107 @@
+{
+  "trades": [
+    {
+      "ticker": "AMAT",
+      "versao_sistema": "v1",
+      "setor": "Semicondutores",
+      "beta": 1.57,
+      "data_entrada": "2026-07-27",
+      "data_saida_real": "2026-08-20",
+      "data_saida_planeada": "2026-08-13",
+      "motivo_saida": "MM20",
+      "dias_em_posicao": 24,
+      "retorno_pct": -11.37,
+      "retorno_spy_pct": null,
+      "alfa_pct": null,
+      "fechado": true,
+      "nota": "Sobredimensionado: 1 acao inteira (~490EUR) num sleeve de 2000EUR, risco real ~5,9% em vez do alvo de 0,5%. Comprou ja abaixo da MM20 (entrada 557.98 vs MM20 ~570) -- filtro de entrada tinha um buraco, corrigido depois deste trade (passou a exigir preco>MM20 e drawdown<15% do maximo de 52 semanas). Beta 1.57 -- acima do limite de 1.2; filtro estava desligado (--beta-max 99). Queda por correcao de setor (semicondutores, jul-2026), sem noticia especifica da AMAT. Perda aprox. -50 EUR (confirmar valor exato de saida acima)."
+    },
+    {
+      "ticker": "A",
+      "versao_sistema": "v2",
+      "setor": "Instrumentacao/Saude",
+      "beta": 0.88,
+      "data_entrada": "2026-08-05",
+      "data_saida_real": "2026-08-25",
+      "data_saida_planeada": "2026-08-26",
+      "motivo_saida": "planeada",
+      "dias_em_posicao": 20,
+      "retorno_pct": 9.95,
+      "retorno_spy_pct": null,
+      "alfa_pct": null,
+      "fechado": true,
+      "nota": "Zacks Rank 2, data confirmada pela empresa (26 ago, AMC, 16:30 ET). Beta 0.88 e drawdown -11,45% -- ambos dentro dos limites. Industry Rank fraco (bottom 36%) -- aposta contra a maré do setor, informativo, nao eliminatorio. movs_4_ultimos tem um outlier de 16,87% -- considerar tamanho reduzido."
+    },
+    {
+      "ticker": "SJM",
+      "versao_sistema": "v2",
+      "setor": "Consumo básico",
+      "beta": -0.28,
+      "data_entrada": "2026-08-20",
+      "data_saida_real": "2026-08-25",
+      "data_saida_planeada": "2026-08-25",
+      "motivo_saida": "planeada",
+      "dias_em_posicao": 5,
+      "retorno_pct": 1.26,
+      "retorno_spy_pct": null,
+      "alfa_pct": null,
+      "fechado": true,
+      "nota": "Beta negativo -- reduz a correlacao agregada face as outras posicoes. Dimensionamento bem calibrado: preco baixo da acao fez 1 unidade bater quase certo com o alvo de risco de 0,5%."
+    }
+  ],
+  "resumo_por_versao": {
+    "v1": {
+      "n_fechados": 1,
+      "n_abertos": 0,
+      "taxa_acerto_pct": 0.0,
+      "retorno_medio_pct": -11.37,
+      "ganho_medio_pct": null,
+      "perda_media_pct": -11.37,
+      "racio_ganho_perda": null,
+      "alfa_medio_pct": null,
+      "dias_medios": 24.0,
+      "amostra_suficiente": false,
+      "faltam_para_30": 29,
+      "veredicto": "aguarda amostra",
+      "por_motivo": {
+        "MM20": 1
+      }
+    },
+    "v2": {
+      "n_fechados": 2,
+      "n_abertos": 0,
+      "taxa_acerto_pct": 100.0,
+      "retorno_medio_pct": 5.6,
+      "ganho_medio_pct": 5.6,
+      "perda_media_pct": null,
+      "racio_ganho_perda": null,
+      "alfa_medio_pct": null,
+      "dias_medios": 12.5,
+      "amostra_suficiente": false,
+      "faltam_para_30": 28,
+      "veredicto": "aguarda amostra",
+      "por_motivo": {
+        "planeada": 2
+      }
+    }
+  },
+  "resumo_todas": {
+    "n_fechados": 3,
+    "n_abertos": 0,
+    "taxa_acerto_pct": 66.7,
+    "retorno_medio_pct": -0.05,
+    "ganho_medio_pct": 5.6,
+    "perda_media_pct": -11.37,
+    "racio_ganho_perda": 0.49,
+    "alfa_medio_pct": null,
+    "dias_medios": 16.3,
+    "amostra_suficiente": false,
+    "faltam_para_30": 27,
+    "veredicto": "aguarda amostra",
+    "por_motivo": {
+      "MM20": 1,
+      "planeada": 2
+    }
+  },
+  "versao_atual": "v2"
+}
