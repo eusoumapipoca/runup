@@ -4,7 +4,7 @@ on:
   schedule:
     # Segundas-feiras às 07:00 UTC (08:00 em Lisboa no inverno, 08:00 BST no verão).
     # O GitHub usa sempre UTC; a hora local varia com a mudança de hora.
-    - cron: "0 7 * * 1"
+    - cron: "17 6 * * 1"
   workflow_dispatch:        # permite correr à mão pelo separador Actions
 
 permissions:
