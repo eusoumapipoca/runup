@@ -38,11 +38,18 @@ MIN_PRICE = 10.0
 MAX_LAST_GAP_DOWN = -5.0  # gap negativo pior que isto elimina
 MAX_HIST_MOVE = 8.0       # movimento medio nos ultimos 4 anuncios; acima elimina
 MAX_DRAWDOWN_52S = 15.0   # % abaixo do maximo de 52 semanas; acima elimina.
-                          # A MM50/MM200 sao lentas e nao apanham uma correcao
-                          # recente com forca (ex: AMAT caiu 20% desde o maximo
-                          # de 30-jun e continuava "acima da MM50" nos filtros
-                          # antigos). Isto e o que a MM20 apanhava so na saida;
-                          # agora tambem filtra a entrada.
+                          # Na v3 e a principal defesa contra quedas fundas:
+                          # tolera-se um recuo curto dentro de uma tendencia de
+                          # alta, nao uma correcao como a da AMAT (-20%).
+
+# Versao do sistema de filtros. Muda quando um filtro de ENTRADA e acrescentado,
+# removido ou o seu limiar alterado -- nunca por causa do resultado de um trade.
+#   v1 (jul/26): preco > MM50 > MM200
+#   v2 (ago/26): + preco > MM20, queda max 15%, beta <= 1.2, stop 3 ATR,
+#                saida antecipada por 2 fechos abaixo da MM20
+#   v3 (set/26): tendencia de longo prazo (MM50 > MM200, preco > MM200) com
+#                recuo tolerado; sai a saida pela MM20 (dispararia no 1o dia)
+VERSAO_SISTEMA = "v3"
 ATR_STOP_MULT = 3.0      # stop a 3 ATR: em 15 sessoes, 1.2 ATR era tocado
                          # por ruido em ~55% dos casos; a 3.0 cai para ~20%
 MAX_BETA = 1.2           # default; ajustavel via --beta-max (99 desliga o filtro)
@@ -389,11 +396,15 @@ def technicals(df: pd.DataFrame) -> dict:
         "atr14": round(a, 2),
         "vol_medio_50d": int(df["Volume"].rolling(50).mean().iloc[-1]),
         "stop": round(price - ATR_STOP_MULT * a, 2),
-        # Preco > MM20 entrou na entrada, nao so na saida: a MM20 reage a uma
-        # correcao recente muito mais depressa que a MM50/MM200, que podem
-        # continuar "otimistas" semanas depois de a tendencia ja ter virado.
-        "tendencia_ok": bool(price > sma20 and price > sma50 and sma50 > sma200),
+        # v3: exige so a tendencia de longo prazo (MM50 > MM200, preco > MM200).
+        # Um recuo abaixo da MM20/MM50 e tolerado, porque e precisamente ai que
+        # vivem as revisoes de estimativas em alta (Zacks 1-2): a v2 exigia
+        # recuperacao completa e cortava-as a todas. A profundidade do recuo
+        # continua limitada pelo filtro de drawdown.
+        "tendencia_ok": bool(price > sma200 and sma50 > sma200),
         "acima_mm20": bool(price > sma20),
+        "acima_mm50": bool(price > sma50),
+        "recuo_mm50_%": round((price / sma50 - 1) * 100, 2),
         "maximo_52s": round(maximo_52s, 2),
         "drawdown_52s_%": drawdown_52s,
     }
@@ -695,8 +706,12 @@ def escrever_json(args, out, today, funil, ultima_data, atraso, fx, fx_origem,
             "ultima_data_preco": ultima_data.isoformat() if ultima_data else None,
             "sessoes_de_atraso": atraso,
             "dados_frescos": (atraso == 0) if atraso is not None else None,
+            "versao_sistema": VERSAO_SISTEMA,
         },
         "regras": {
+            "versao_sistema": VERSAO_SISTEMA,
+            "tendencia": "MM50 > MM200, preço > MM200",
+            "saidas": "véspera do anúncio ou stop",
             "entrada_sessoes_antes": [ENTRY_EARLY, ENTRY_LATE],
             "beta_max": args.beta_max,
             "atr_mult_stop": args.atr_mult,

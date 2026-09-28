@@ -244,6 +244,7 @@ const emJanela = aprovados.filter(c => c.janela_aberta_hoje);
   el("meta", `
     <span>Corrida de ${fdataLonga(m.data_corrida)}</span>
     <span>${m.semanas_analisadas} semanas analisadas</span>
+    ${m.versao_sistema ? `<span>Sistema ${esc(m.versao_sistema)}</span>` : ""}
     <span class="selo ${fresco ? "ok" : "alerta"}">${fresco
       ? "Preços atualizados"
       : `Preços com ${m.sessoes_de_atraso} sessão(ões) de atraso`}</span>`);
@@ -322,6 +323,7 @@ const emJanela = aprovados.filter(c => c.janela_aberta_hoje);
       ["Distância ao stop", num(dim.distancia_stop_pct ?? c.distancia_stop_pct, 2, "%")],
       ["Beta", num(c.beta)],
       ["Queda desde o máximo", num(c["drawdown_52s_%"], 1, "%")],
+      ["Face à MM50", num(c["recuo_mm50_%"], 1, "%")],
       ["Movimento médio nos resultados", num(c["mov_historico_%"], 1, "%")],
     ];
     return `<article class="ficha">
@@ -516,6 +518,9 @@ const emJanela = aprovados.filter(c => c.janela_aberta_hoje);
 (function () {
   const r = D.regras || {}, c = D.capital || {};
   const itens = [
+    ["Versão do sistema", r.versao_sistema || "—"],
+    ["Tendência", r.tendencia || "—"],
+    ["Saída", r.saidas || "—"],
     ["Janela de entrada", r.entrada_sessoes_antes ? `T-${r.entrada_sessoes_antes[0]} a T-${r.entrada_sessoes_antes[1]}` : "—"],
     ["Stop", r.atr_mult_stop ? `${r.atr_mult_stop} × ATR(14)` : "—"],
     ["Beta máximo", num(r.beta_max)],
