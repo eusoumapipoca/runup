@@ -63,6 +63,22 @@
       "alfa_pct": null,
       "fechado": false,
       "nota": null
+    },
+    {
+      "ticker": "VLO",
+      "versao_sistema": "v3",
+      "setor": "Energia",
+      "beta": null,
+      "data_entrada": "2026-10-01",
+      "data_saida_real": null,
+      "data_saida_planeada": "2026-10-21",
+      "motivo_saida": null,
+      "dias_em_posicao": null,
+      "retorno_pct": null,
+      "retorno_spy_pct": null,
+      "alfa_pct": null,
+      "fechado": false,
+      "nota": null
     }
   ],
   "resumo_por_versao": {
@@ -102,7 +118,7 @@
     },
     "v3": {
       "n_fechados": 0,
-      "n_abertos": 1,
+      "n_abertos": 2,
       "taxa_acerto_pct": null,
       "retorno_medio_pct": null,
       "ganho_medio_pct": null,
@@ -118,7 +134,7 @@
   },
   "resumo_todas": {
     "n_fechados": 3,
-    "n_abertos": 1,
+    "n_abertos": 2,
     "taxa_acerto_pct": 66.7,
     "retorno_medio_pct": -0.05,
     "ganho_medio_pct": 5.6,
