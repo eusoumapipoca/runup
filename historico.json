@@ -47,6 +47,22 @@
       "alfa_pct": 0.83,
       "fechado": true,
       "nota": "Beta negativo -- reduz a correlacao agregada face as outras posicoes. Dimensionamento bem calibrado: preco baixo da acao fez 1 unidade bater quase certo com o alvo de risco de 0,5%."
+    },
+    {
+      "ticker": "TRV",
+      "versao_sistema": "v3",
+      "setor": "Seguros",
+      "beta": -0.1,
+      "data_entrada": "2026-09-30",
+      "data_saida_real": null,
+      "data_saida_planeada": "2026-10-15",
+      "motivo_saida": null,
+      "dias_em_posicao": null,
+      "retorno_pct": null,
+      "retorno_spy_pct": null,
+      "alfa_pct": null,
+      "fechado": false,
+      "nota": null
     }
   ],
   "resumo_por_versao": {
@@ -83,11 +99,26 @@
       "por_motivo": {
         "planeada": 2
       }
+    },
+    "v3": {
+      "n_fechados": 0,
+      "n_abertos": 1,
+      "taxa_acerto_pct": null,
+      "retorno_medio_pct": null,
+      "ganho_medio_pct": null,
+      "perda_media_pct": null,
+      "racio_ganho_perda": null,
+      "alfa_medio_pct": null,
+      "dias_medios": null,
+      "amostra_suficiente": false,
+      "faltam_para_30": 30,
+      "veredicto": "aguarda amostra",
+      "por_motivo": {}
     }
   },
   "resumo_todas": {
     "n_fechados": 3,
-    "n_abertos": 0,
+    "n_abertos": 1,
     "taxa_acerto_pct": 66.7,
     "retorno_medio_pct": -0.05,
     "ganho_medio_pct": 5.6,
@@ -103,5 +134,5 @@
       "planeada": 2
     }
   },
-  "versao_atual": "v2"
+  "versao_atual": "v3"
 }
