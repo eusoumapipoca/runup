@@ -1,0 +1,45 @@
+name: Rascunho da newsletter
+
+on:
+  schedule:
+    # Sábados às 08:17 UTC (09:17 em Lisboa no horário de verão).
+    # Depois do fecho de sexta, com a semana completa.
+    - cron: "17 8 * * 6"
+  workflow_dispatch:
+
+permissions:
+  contents: read            # só lê o repositório; não faz commits
+
+jobs:
+  rascunho:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependências
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas pandas_market_calendars yfinance requests lxml openpyxl
+
+      - name: Gerar os dados da semana
+        env:
+          FINNHUB_TOKEN: ${{ secrets.FINNHUB_TOKEN }}
+        run: |
+          python earnings_runup.py --weeks 8 --json dashboard.json --html /tmp/descartar.html
+
+      - name: Criar rascunho no Buttondown (nunca envia)
+        env:
+          BUTTONDOWN_API_KEY: ${{ secrets.BUTTONDOWN_API_KEY }}
+        run: |
+          python newsletter.py --json dashboard.json --out newsletter.md --buttondown
+
+      - name: Guardar cópia do rascunho
+        uses: actions/upload-artifact@v4
+        with:
+          name: newsletter
+          path: newsletter.md
