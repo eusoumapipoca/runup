@@ -30,7 +30,7 @@ jobs:
         env:
           FINNHUB_TOKEN: ${{ secrets.FINNHUB_TOKEN }}
         run: |
-          python earnings_runup.py --weeks 8 --json dashboard.json --html /tmp/descartar.html
+          python earnings_runup.py --weeks 8 --all --json dashboard.json --html /tmp/descartar.html
 
       - name: Criar rascunho no Buttondown (nunca envia)
         env:
