@@ -25,7 +25,7 @@ from datetime import date, timedelta
 DASHBOARD_URL = "https://eusoumapipoca.github.io/runup/"
 HUB_URL = "https://confluens.carrd.co/"
 MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"]
-MARCADOR_NOTA = "✍️ ESCREVE AQUI A TUA NOTA DA SEMANA (e apaga esta caixa)"
+MARCA = "✍️"   # tudo o que comeca por isto e para ti escreveres (e apagares a instrucao)
 CHART_URL = DASHBOARD_URL + "curva.png"
 
 # Paleta do dashboard (papel de listagem de mainframe). Tudo inline: os clientes
@@ -120,6 +120,47 @@ def cartoes(itens):
             f'style="border-collapse:separate;margin:0 -6px;"><tr>{tds}</tr></table>')
 
 
+def caixa_humana(rotulo, perguntas):
+    """Espaco para o autor escrever. Tracejado ambar = ainda por preencher."""
+    itens = "".join(f"<li>{e(p)}</li>" for p in perguntas)
+    return (f'<div style="font-family:{MONO};font-size:12px;line-height:1.5;border:1px dashed {AVISO};'
+            f'color:{AVISO};padding:10px 12px;margin:10px 0;">{MARCA} <b>{e(rotulo)}</b>'
+            f'<ul style="margin:6px 0 0;padding-left:18px;">{itens}</ul></div>')
+
+
+def sinal_pt(v, casas=1):
+    return pct(v, casas).replace(".", ",").replace("-", "−")
+
+
+def razao_rejeicao(c, R):
+    """Traduz o codigo do filtro para uma frase com o valor que o chumbou."""
+    out = []
+    for m in c.get("motivo") or []:
+        if m == "tendencia":
+            out.append("tendência quebrada (MM50 abaixo da MM200 ou preço abaixo da MM200)")
+        elif m == "drawdown_52s":
+            out.append(f"{sinal_pt(c.get('drawdown_52s_%'))} desde o máximo de 52 semanas "
+                       f"(limite −{R.get('max_drawdown_52s_pct', 15):.0f}%)")
+        elif m == "beta":
+            b = c.get("beta")
+            out.append(f"beta {b:.2f} (limite {R.get('beta_max', 1.2)})".replace(".", ",") if b is not None
+                       else "beta acima do limite")
+        elif m == "gap_anterior":
+            out.append(f"caiu {sinal_pt(c.get('gap_ultimo_anuncio_%'))} no último anúncio")
+        elif m == "mov_historico":
+            out.append(f"move em média {c.get('mov_historico_%', 0):.1f}% nos resultados "
+                       f"(limite {R.get('max_movimento_historico_pct', 8):.0f}%)".replace(".", ","))
+        elif m == "liquidez":
+            out.append("pouca liquidez")
+        elif m == "preco":
+            out.append("preço abaixo de 10 dólares")
+        elif m == "datas":
+            out.append("datas de entrada/saída indeterminadas")
+        else:
+            out.append(m)
+    return "; ".join(out) or "—"
+
+
 def barra(n, total=30):
     p = max(2, min(100, round(100 * n / total)))
     return (f'<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0 2px;">'
@@ -209,8 +250,20 @@ def seccao_runup(D, hoje, com_grafico=False):
     fechados_semana = [t for t in trades if t.get("fechado")
                        and d(t.get("data_saida_real")) and d(t["data_saida_real"]) > semana_ini]
 
+    entradas = [t for t in trades if d(t.get("data_entrada")) and d(t["data_entrada"]) > semana_ini]
+
     cand = D.get("candidatos", [])
+    R = D.get("regras") or {}
+    por_ticker = {c["ticker"]: c for c in cand}
     aprov = [c for c in cand if c.get("estado") == "OK"]
+    # chumbados com janela aberta agora ou a abrir nos proximos 7 dias
+    # (so existem no JSON se o earnings_runup.py correr com --all)
+    chumbados = sorted(
+        [c for c in cand if c.get("estado") == "FALHA" and d(c.get("T_minus_15"))
+         and d(c.get("T_minus_12")) and d(c["T_minus_12"]) >= hoje
+         and d(c["T_minus_15"]) <= hoje + timedelta(days=7)],
+        key=lambda c: c.get("data_anuncio") or "")
+    detidos = {t["ticker"] for t in trades}
     em_janela = [c for c in aprov if c.get("janela_aberta_hoje")]
     proximos = sorted(
         [c for c in aprov if not c.get("janela_aberta_hoje") and d(c.get("T_minus_15"))
@@ -250,6 +303,32 @@ def seccao_runup(D, hoje, com_grafico=False):
         L.append(nota("Poucos trades fechados para traçar a evolução (mínimo 2). "
                       "O gráfico aparece assim que houver dados."))
 
+    # --- entradas da semana: o porque de cada uma ---
+    if entradas:
+        L.append(titulo("Entrei esta semana"))
+        for t in entradas:
+            c = por_ticker.get(t["ticker"], {})
+            crit = []
+            if c.get("tendencia_ok"):
+                crit.append("tendência ok (MM50 &gt; MM200)")
+            b = t.get("beta") if t.get("beta") is not None else c.get("beta")
+            if b is not None:
+                crit.append(f"beta {b:.2f}".replace(".", ","))
+            if c.get("drawdown_52s_%") is not None:
+                crit.append(f"{e(sinal_pt(c['drawdown_52s_%']))} do máximo")
+            if c.get("mov_historico_%") is not None:
+                crit.append(f"move {c['mov_historico_%']:.1f}% nos resultados".replace(".", ","))
+            crit.append("estimativas a subir e data confirmada (verificação manual)")
+            L.append(f'<div style="font-family:{MONO};font-size:12px;line-height:1.55;'
+                     f'background:{LISTRA};padding:8px 10px;margin:0 0 6px;">'
+                     f'<b>{e(t["ticker"])}</b> · {e(t.get("setor"))} · entrada {e(fdata(t.get("data_entrada")))}, '
+                     f'saída planeada {e(fdata(t.get("data_saida_planeada")))}<br>'
+                     f'<span style="color:{FRACA};">{" · ".join(crit)}</span></div>')
+        L.append(caixa_humana("Porquê estas (uma frase por ação)", [
+            "O que te fez carregar no botão além dos filtros? Ex.: setor com vento a favor, "
+            "reação forte no trimestre anterior, ou só regra cumprida.",
+            "Alguma hesitação? Ex.: entrei mais tarde na janela, tamanho reduzido."]))
+
     # --- fechados esta semana ---
     if fechados_semana:
         L.append(titulo("Fechados esta semana"))
@@ -284,17 +363,30 @@ def seccao_runup(D, hoje, com_grafico=False):
                  + " tem saída registada no journal mas sem preço de saída, por isso não conta para o "
                    "placar. Preenche e volta a gerar, e apaga este aviso.</div>")
 
-    # --- funil da semana ---
+    # --- funil numa linha ---
     f = D.get("funil") or {}
-    L.append(titulo("O funil desta semana"))
-    L.append(tabela(["Etapa", "Ações"], [
-        ["Universo (S&P 500)", e(f.get("universo"))],
-        ["Com resultados nas próximas 8 semanas", e(f.get("com_anuncio"))],
-        ["Passaram os filtros automáticos", str(len(aprov))],
-        ["Em janela de compra hoje", f"<b>{len(em_janela)}</b>"],
-    ], alinhar_dir=(1,)))
-    L.append(nota("Os que passam os filtros ainda precisam de duas verificações manuais: "
-                  "revisões de estimativas em alta e data confirmada pela empresa."))
+    L.append(titulo("O que o sistema viu"))
+    L.append(f'<p style="font-family:{MONO};font-size:12px;line-height:1.6;color:{TINTA};margin:0 0 8px;">'
+             f'{e(f.get("universo"))} ações → {e(f.get("com_anuncio"))} com resultados em 8 semanas → '
+             f'<b>{len(aprov)}</b> passam os filtros automáticos → <b>{len(em_janela)}</b> em janela hoje.</p>')
+
+    # aprovados em janela onde nao entrei: a decisao manual e conteudo
+    sem_entrada = [c for c in em_janela if c["ticker"] not in detidos]
+    if sem_entrada:
+        L.append(nota("Passaram os filtros e estão em janela, mas não entrei: <b>"
+                      + e(", ".join(c["ticker"] for c in sem_entrada)) + "</b>.", TINTA))
+        L.append(caixa_humana("Porque ficaram de fora", [
+            "Zacks 3 ou pior? Data por confirmar no site da empresa? Notícia pendente "
+            "(como a DGX com os cortes do Medicare)?"]))
+
+    # --- chumbados: o sistema a dizer que nao ---
+    if chumbados:
+        L.append(titulo("Chumbados pelo sistema"))
+        L.append(tabela(["Ação", "Resultados", "Porquê"],
+                        [[f"<b>{e(c['ticker'])}</b>", e(fdata(c.get("data_anuncio"))),
+                          e(razao_rejeicao(c, R))] for c in chumbados[:8]]))
+        if len(chumbados) > 8:
+            L.append(nota(f"E mais {len(chumbados) - 8} com a janela a abrir esta semana."))
 
     # --- proxima semana ---
     if proximos:
@@ -305,7 +397,23 @@ def seccao_runup(D, hoje, com_grafico=False):
         L.append(tabela(["Ação", "Janela de compra", "Resultados"], linhas))
         L.append(nota("Lista de observação, não de compra. Ainda falta a verificação manual."))
 
-    return L, [t["ticker"] for t in abertos]
+    # --- assunto: o que realmente aconteceu ---
+    assunto = []
+    if entradas:
+        assunto.append("Entrada em " + ", ".join(t["ticker"] for t in entradas))
+    for t in fechados_semana[:2]:
+        assunto.append(f"{t['ticker']} fechou {sinal_pt(t.get('retorno_pct'))}")
+    if not assunto and abertos:
+        prox = min(abertos, key=lambda t: t.get("data_saida_planeada") or "9999")
+        fim = d(prox.get("data_saida_planeada"))
+        if fim and fim >= hoje:
+            assunto.append(f"{prox['ticker']} a {(fim - hoje).days} dias da saída")
+    if proximos and len(assunto) < 2:
+        assunto.append(proximos[0]["ticker"] + " em observação")
+    if not assunto:
+        assunto.append(f"Semana sem entradas — {len(chumbados)} chumbados pelo sistema")
+
+    return {"linhas": L, "detidas": [t["ticker"] for t in abertos], "assunto": assunto}
 
 
 # Para acrescentar estrategias: escreve seccao_fda(D, hoje, ...) / seccao_picks(...)
@@ -316,15 +424,29 @@ SECCOES = [seccao_runup]
 # ----------------------------------------------------------------------------
 # Montagem
 # ----------------------------------------------------------------------------
+def caixa_metodo(D):
+    R = D.get("regras") or {}
+    return (f'<div style="font-family:{MONO};font-size:11px;line-height:1.55;color:{FRACA};'
+            f'border:1px solid {LINHA};padding:10px 12px;margin:16px 0 0;">'
+            f'<b style="color:{TINTA};">O método em três linhas.</b> '
+            f'Compro ações do S&amp;P 500 cerca de 15 sessões antes dos resultados e vendo sempre na véspera '
+            f'do anúncio: nunca atravesso os números. Só entram empresas em tendência de subida, '
+            f'pouco voláteis (beta até {e(R.get("beta_max", 1.2))}) e com estimativas a ser revistas em alta. '
+            f'Cada trade arrisca 0,5% da carteira; ao fim de 30 trades, se não bater o índice, o sistema é '
+            f'abandonado. <b>Alfa</b> = o meu retorno menos o do S&amp;P 500 no mesmo período. '
+            f'<a href="{DASHBOARD_URL}" style="color:{TINTA};">Regras completas</a>.</div>')
+
+
 def montar(D, hoje, com_grafico=False):
     semana = hoje.isocalendar()[1]
-    corpo, detidas = [], []
+    corpo, detidas, partes = [], [], []
     for s in SECCOES:
-        linhas, tickers = s(D, hoje, com_grafico)
-        corpo += linhas
-        detidas += tickers
+        r = s(D, hoje, com_grafico)
+        corpo += r["linhas"]
+        detidas += r["detidas"]
+        partes += r["assunto"]
 
-    assunto = f"Confluens · semana {semana} — {len(detidas)} posição(ões) aberta(s)"
+    assunto = f"Confluens #{semana} · " + " · ".join(partes[:3])
 
     decl = ((f"O autor detém posição em: {e(', '.join(sorted(set(detidas))))}. " if detidas
              else "O autor não detém posições nas ações mencionadas. ")
@@ -339,11 +461,19 @@ def montar(D, hoje, com_grafico=False):
         f'<div style="font-family:{MONO};font-size:11px;color:{FRACA};letter-spacing:.1em;'
         f'text-transform:uppercase;border-bottom:2px solid {TINTA};padding:2px 0 8px;margin-bottom:10px;">'
         f'Semana {semana} · {e(fdata(hoje.isoformat()))} {hoje.year}</div>',
-        f'<div style="font-family:{MONO};font-size:13px;border:1px dashed {AVISO};color:{AVISO};'
-        f'padding:10px;margin:10px 0;">{e(MARCADOR_NOTA)}</div>',
+        caixa_humana("Abertura (3 a 6 frases, é o que as pessoas leem)", [
+            "O que aconteceu esta semana, em linguagem de café: entrei, saí, esperei, errei?",
+            "Uma coisa que te surpreendeu: no mercado, numa ação, ou em ti a seguir as regras.",
+            "Se não houve trades: porque é que não fazer nada também é o sistema a funcionar.",
+        ]),
     ]
     md += corpo
     md += [
+        caixa_humana("Lição ou dúvida da semana (opcional, 2 a 3 frases)", [
+            "Algo que mudarias no sistema, mas que só vais testar depois dos 30 trades?",
+            "Um erro teu (de execução, não do sistema) e como o vais evitar?",
+        ]),
+        caixa_metodo(D),
         f'<div style="border-top:2px solid {TINTA};margin-top:18px;padding-top:10px;'
         f'font-family:{MONO};font-size:12px;">Dashboard com todos os candidatos e o histórico: '
         f'<a href="{DASHBOARD_URL}" style="color:{TINTA};">{DASHBOARD_URL}</a></div>',
@@ -405,6 +535,11 @@ def main():
                 f'<body style="margin:0;background:#e9e7dd"><div style="max-width:640px;margin:0 auto">'
                 f'{corpo}</div>')
     print(f"Newsletter -> {args.out} (pré-visualização: {prev})", file=sys.stderr)
+
+    n_caixas = corpo.count(MARCA)
+    if n_caixas:
+        print(f"{n_caixas} caixa(s) {MARCA} para preencheres no Buttondown antes de enviar.",
+              file=sys.stderr)
 
     if args.buttondown:
         criar_rascunho_buttondown(assunto, corpo)
