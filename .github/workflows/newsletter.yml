@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read            # só lê o repositório; não faz commits
+  contents: write           # precisa de escrever só para publicar curva.png
 
 jobs:
   rascunho:
@@ -38,8 +38,22 @@ jobs:
         run: |
           python newsletter.py --json dashboard.json --out newsletter.md --buttondown
 
+      - name: Publicar o gráfico no site (curva.png)
+        if: always()                # o email aponta para este ficheiro
+        run: |
+          if [ -f curva.png ]; then
+            git config user.name  "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add curva.png
+            git diff --cached --quiet || (git commit -m "Gráfico da newsletter" && git pull --rebase && git push)
+          fi
+
       - name: Guardar cópia do rascunho
+        if: always()                # guarda o .md/.html mesmo se o Buttondown falhar
         uses: actions/upload-artifact@v4
         with:
           name: newsletter
-          path: newsletter.md
+          path: |
+            newsletter.md
+            newsletter.html
+            curva.png
