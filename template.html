@@ -172,7 +172,8 @@ footer a{color:var(--tinta-fraca)}
 <section>
   <h2>Janelas de entrada e saída</h2>
   <p class="sub">Cada barra é o intervalo em que se pode comprar. O losango marca a
-     venda obrigatória, na véspera da apresentação de resultados.</p>
+     venda obrigatória, na véspera da apresentação de resultados. Só aparecem janelas
+     abertas ou a abrir; ● marca uma posição em curso.</p>
   <div class="timeline" id="timeline"></div>
 </section>
 
@@ -254,8 +255,20 @@ const emJanela = aprovados.filter(c => c.janela_aberta_hoje);
 /* ---------- linha temporal ---------- */
 (function () {
   const alvo = document.getElementById("timeline");
-  const lista = aprovados.filter(c => c.T_minus_15 && c.data_saida).slice(0, 12);
-  if (!lista.length) { alvo.innerHTML = `<div class="vazio">Sem candidatos aprovados nesta corrida.</div>`; return; }
+  // So o que ainda interessa: janelas abertas ou por abrir, mais as posicoes
+  // abertas ate a data de saida. Janelas ja fechadas sem posicao sao passado.
+  const abertas = new Set(((D.historico || {}).trades || [])
+    .filter(t => !t.fechado && !t.data_saida_real).map(t => t.ticker));
+  const relevantes = aprovados
+    .filter(c => c.T_minus_15 && c.data_saida)
+    .filter(c => c.T_minus_12 >= hoje || (abertas.has(c.ticker) && c.data_saida >= hoje))
+    .sort((p, q) => (p.T_minus_15 > q.T_minus_15) - (p.T_minus_15 < q.T_minus_15));
+  const lista = relevantes.slice(0, 12);
+  if (!lista.length) { alvo.innerHTML = `<div class="vazio">Sem janelas abertas ou a abrir nesta corrida.</div>`; return; }
+  if (relevantes.length > lista.length) {
+    alvo.insertAdjacentHTML("afterend",
+      `<p class="sub">Mais ${relevantes.length - lista.length} com janela mais tarde — ver a tabela completa.</p>`);
+  }
 
   const datas = lista.flatMap(c => [dt(c.T_minus_15), dt(c.data_saida)]).concat([dt(hoje)]);
   const min = new Date(Math.min(...datas)), max = new Date(Math.max(...datas));
@@ -286,7 +299,7 @@ const emJanela = aprovados.filter(c => c.janela_aberta_hoje);
   lista.forEach((c, i) => {
     const y = topo + i * H;
     const a = x(+dt(c.T_minus_15)), b = x(+dt(c.T_minus_12)), f = x(+dt(c.data_saida));
-    s += `<text class="tl-nome" x="0" y="${y + 15}">${esc(c.ticker)}</text>`;
+    s += `<text class="tl-nome" x="0" y="${y + 15}">${esc(c.ticker)}${abertas.has(c.ticker) ? " ●" : ""}</text>`;
     s += `<line x1="${b}" y1="${y + 10}" x2="${f}" y2="${y + 10}"
            stroke="var(--linha-forte)" stroke-width="1" stroke-dasharray="2 3"/>`;
     s += `<rect x="${a}" y="${y + 3}" width="${Math.max(b - a, 3)}" height="15"
