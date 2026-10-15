@@ -54,14 +54,14 @@
       "setor": "Seguros",
       "beta": -0.1,
       "data_entrada": "2026-09-30",
-      "data_saida_real": null,
+      "data_saida_real": "2028-10-15",
       "data_saida_planeada": "2026-10-15",
-      "motivo_saida": null,
-      "dias_em_posicao": null,
-      "retorno_pct": null,
-      "retorno_spy_pct": null,
-      "alfa_pct": null,
-      "fechado": false,
+      "motivo_saida": "planeada",
+      "dias_em_posicao": 746,
+      "retorno_pct": 3.94,
+      "retorno_spy_pct": 0.92,
+      "alfa_pct": 3.02,
+      "fechado": true,
       "nota": null
     },
     {
@@ -72,6 +72,22 @@
       "data_entrada": "2026-10-01",
       "data_saida_real": null,
       "data_saida_planeada": "2026-10-21",
+      "motivo_saida": null,
+      "dias_em_posicao": null,
+      "retorno_pct": null,
+      "retorno_spy_pct": null,
+      "alfa_pct": null,
+      "fechado": false,
+      "nota": null
+    },
+    {
+      "ticker": "AME",
+      "versao_sistema": null,
+      "setor": null,
+      "beta": null,
+      "data_entrada": "2025-10-14",
+      "data_saida_real": null,
+      "data_saida_planeada": null,
       "motivo_saida": null,
       "dias_em_posicao": null,
       "retorno_pct": null,
@@ -117,37 +133,39 @@
       }
     },
     "v3": {
-      "n_fechados": 0,
-      "n_abertos": 2,
-      "taxa_acerto_pct": null,
-      "retorno_medio_pct": null,
-      "ganho_medio_pct": null,
+      "n_fechados": 1,
+      "n_abertos": 1,
+      "taxa_acerto_pct": 100.0,
+      "retorno_medio_pct": 3.94,
+      "ganho_medio_pct": 3.94,
       "perda_media_pct": null,
       "racio_ganho_perda": null,
-      "alfa_medio_pct": null,
-      "dias_medios": null,
+      "alfa_medio_pct": 3.02,
+      "dias_medios": 746.0,
       "amostra_suficiente": false,
-      "faltam_para_30": 30,
+      "faltam_para_30": 29,
       "veredicto": "aguarda amostra",
-      "por_motivo": {}
+      "por_motivo": {
+        "planeada": 1
+      }
     }
   },
   "resumo_todas": {
-    "n_fechados": 3,
+    "n_fechados": 4,
     "n_abertos": 2,
-    "taxa_acerto_pct": 66.7,
-    "retorno_medio_pct": -0.05,
-    "ganho_medio_pct": 5.6,
+    "taxa_acerto_pct": 75.0,
+    "retorno_medio_pct": 0.95,
+    "ganho_medio_pct": 5.05,
     "perda_media_pct": -11.37,
-    "racio_ganho_perda": 0.49,
-    "alfa_medio_pct": 5.64,
-    "dias_medios": 16.3,
+    "racio_ganho_perda": 0.44,
+    "alfa_medio_pct": 4.77,
+    "dias_medios": 198.8,
     "amostra_suficiente": false,
-    "faltam_para_30": 27,
+    "faltam_para_30": 26,
     "veredicto": "aguarda amostra",
     "por_motivo": {
       "MM20": 1,
-      "planeada": 2
+      "planeada": 3
     }
   },
   "versao_atual": "v3"
