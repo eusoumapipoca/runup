@@ -82,8 +82,8 @@
     },
     {
       "ticker": "AME",
-      "versao_sistema": null,
-      "setor": null,
+      "versao_sistema": "v3",
+      "setor": "Industrial",
       "beta": null,
       "data_entrada": "2026-10-14",
       "data_saida_real": null,
@@ -134,7 +134,7 @@
     },
     "v3": {
       "n_fechados": 1,
-      "n_abertos": 1,
+      "n_abertos": 2,
       "taxa_acerto_pct": 100.0,
       "retorno_medio_pct": 3.94,
       "ganho_medio_pct": 3.94,
