@@ -95,6 +95,22 @@
       "alfa_pct": null,
       "fechado": false,
       "nota": null
+    },
+    {
+      "ticker": "MET",
+      "versao_sistema": "v3",
+      "setor": "Seguros ",
+      "beta": null,
+      "data_entrada": "2026-10-16",
+      "data_saida_real": null,
+      "data_saida_planeada": null,
+      "motivo_saida": null,
+      "dias_em_posicao": null,
+      "retorno_pct": null,
+      "retorno_spy_pct": null,
+      "alfa_pct": null,
+      "fechado": false,
+      "nota": null
     }
   ],
   "resumo_por_versao": {
@@ -134,7 +150,7 @@
     },
     "v3": {
       "n_fechados": 1,
-      "n_abertos": 2,
+      "n_abertos": 3,
       "taxa_acerto_pct": 100.0,
       "retorno_medio_pct": 3.94,
       "ganho_medio_pct": 3.94,
@@ -152,7 +168,7 @@
   },
   "resumo_todas": {
     "n_fechados": 4,
-    "n_abertos": 2,
+    "n_abertos": 3,
     "taxa_acerto_pct": 75.0,
     "retorno_medio_pct": 0.95,
     "ganho_medio_pct": 5.05,
