@@ -70,14 +70,14 @@
       "setor": "Energia",
       "beta": null,
       "data_entrada": "2026-10-01",
-      "data_saida_real": null,
+      "data_saida_real": "2026-10-21",
       "data_saida_planeada": "2026-10-21",
       "motivo_saida": null,
-      "dias_em_posicao": null,
-      "retorno_pct": null,
-      "retorno_spy_pct": null,
-      "alfa_pct": null,
-      "fechado": false,
+      "dias_em_posicao": 20,
+      "retorno_pct": 7.71,
+      "retorno_spy_pct": 0.86,
+      "alfa_pct": 6.85,
+      "fechado": true,
       "nota": null
     },
     {
@@ -149,39 +149,41 @@
       }
     },
     "v3": {
-      "n_fechados": 1,
-      "n_abertos": 3,
+      "n_fechados": 2,
+      "n_abertos": 2,
       "taxa_acerto_pct": 100.0,
-      "retorno_medio_pct": 3.94,
-      "ganho_medio_pct": 3.94,
+      "retorno_medio_pct": 5.83,
+      "ganho_medio_pct": 5.83,
       "perda_media_pct": null,
       "racio_ganho_perda": null,
-      "alfa_medio_pct": 3.02,
-      "dias_medios": 15.0,
+      "alfa_medio_pct": 4.93,
+      "dias_medios": 17.5,
       "amostra_suficiente": false,
-      "faltam_para_30": 29,
+      "faltam_para_30": 28,
       "veredicto": "aguarda amostra",
       "por_motivo": {
-        "planeada": 1
+        "planeada": 1,
+        "sem_motivo": 1
       }
     }
   },
   "resumo_todas": {
-    "n_fechados": 4,
-    "n_abertos": 3,
-    "taxa_acerto_pct": 75.0,
-    "retorno_medio_pct": 0.95,
-    "ganho_medio_pct": 5.05,
+    "n_fechados": 5,
+    "n_abertos": 2,
+    "taxa_acerto_pct": 80.0,
+    "retorno_medio_pct": 2.3,
+    "ganho_medio_pct": 5.71,
     "perda_media_pct": -11.37,
-    "racio_ganho_perda": 0.44,
-    "alfa_medio_pct": 4.77,
-    "dias_medios": 16.0,
+    "racio_ganho_perda": 0.5,
+    "alfa_medio_pct": 5.29,
+    "dias_medios": 16.8,
     "amostra_suficiente": false,
-    "faltam_para_30": 26,
+    "faltam_para_30": 25,
     "veredicto": "aguarda amostra",
     "por_motivo": {
       "MM20": 1,
-      "planeada": 3
+      "planeada": 3,
+      "sem_motivo": 1
     }
   },
   "versao_atual": "v3"
