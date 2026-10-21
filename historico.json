@@ -72,7 +72,7 @@
       "data_entrada": "2026-10-01",
       "data_saida_real": "2026-10-21",
       "data_saida_planeada": "2026-10-21",
-      "motivo_saida": null,
+      "motivo_saida": "planeada",
       "dias_em_posicao": 20,
       "retorno_pct": 7.71,
       "retorno_spy_pct": 0.86,
@@ -104,6 +104,22 @@
       "data_entrada": "2026-10-16",
       "data_saida_real": null,
       "data_saida_planeada": "2026-11-04",
+      "motivo_saida": null,
+      "dias_em_posicao": null,
+      "retorno_pct": null,
+      "retorno_spy_pct": null,
+      "alfa_pct": null,
+      "fechado": false,
+      "nota": null
+    },
+    {
+      "ticker": "HUM",
+      "versao_sistema": "v3",
+      "setor": "Saide",
+      "beta": null,
+      "data_entrada": "2026-10-21",
+      "data_saida_real": null,
+      "data_saida_planeada": "2026-11-05",
       "motivo_saida": null,
       "dias_em_posicao": null,
       "retorno_pct": null,
@@ -150,7 +166,7 @@
     },
     "v3": {
       "n_fechados": 2,
-      "n_abertos": 2,
+      "n_abertos": 3,
       "taxa_acerto_pct": 100.0,
       "retorno_medio_pct": 5.83,
       "ganho_medio_pct": 5.83,
@@ -162,14 +178,13 @@
       "faltam_para_30": 28,
       "veredicto": "aguarda amostra",
       "por_motivo": {
-        "planeada": 1,
-        "sem_motivo": 1
+        "planeada": 2
       }
     }
   },
   "resumo_todas": {
     "n_fechados": 5,
-    "n_abertos": 2,
+    "n_abertos": 3,
     "taxa_acerto_pct": 80.0,
     "retorno_medio_pct": 2.3,
     "ganho_medio_pct": 5.71,
@@ -182,8 +197,7 @@
     "veredicto": "aguarda amostra",
     "por_motivo": {
       "MM20": 1,
-      "planeada": 3,
-      "sem_motivo": 1
+      "planeada": 4
     }
   },
   "versao_atual": "v3"
