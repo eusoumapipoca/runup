@@ -118,14 +118,14 @@
       "setor": "Saude",
       "beta": null,
       "data_entrada": "2026-10-21",
-      "data_saida_real": "2026-11-05",
+      "data_saida_real": "2026-11-06",
       "data_saida_planeada": "2026-11-05",
       "motivo_saida": null,
-      "dias_em_posicao": 15,
-      "retorno_pct": null,
-      "retorno_spy_pct": null,
-      "alfa_pct": null,
-      "fechado": false,
+      "dias_em_posicao": 16,
+      "retorno_pct": 0.53,
+      "retorno_spy_pct": -4.59,
+      "alfa_pct": 5.12,
+      "fechado": true,
       "nota": null
     }
   ],
@@ -165,39 +165,41 @@
       }
     },
     "v3": {
-      "n_fechados": 4,
-      "n_abertos": 1,
+      "n_fechados": 5,
+      "n_abertos": 0,
       "taxa_acerto_pct": 100.0,
-      "retorno_medio_pct": 3.48,
-      "ganho_medio_pct": 3.48,
+      "retorno_medio_pct": 2.89,
+      "ganho_medio_pct": 2.89,
       "perda_media_pct": null,
       "racio_ganho_perda": null,
-      "alfa_medio_pct": 3.48,
-      "dias_medios": 18.5,
+      "alfa_medio_pct": 3.81,
+      "dias_medios": 18.0,
       "amostra_suficiente": false,
-      "faltam_para_30": 26,
+      "faltam_para_30": 25,
       "veredicto": "aguarda amostra",
       "por_motivo": {
-        "planeada": 4
+        "planeada": 4,
+        "sem_motivo": 1
       }
     }
   },
   "resumo_todas": {
-    "n_fechados": 7,
-    "n_abertos": 1,
-    "taxa_acerto_pct": 85.7,
-    "retorno_medio_pct": 1.96,
-    "ganho_medio_pct": 4.19,
+    "n_fechados": 8,
+    "n_abertos": 0,
+    "taxa_acerto_pct": 87.5,
+    "retorno_medio_pct": 1.78,
+    "ganho_medio_pct": 3.66,
     "perda_media_pct": -11.37,
-    "racio_ganho_perda": 0.37,
-    "alfa_medio_pct": 4.2,
-    "dias_medios": 17.6,
+    "racio_ganho_perda": 0.32,
+    "alfa_medio_pct": 4.33,
+    "dias_medios": 17.4,
     "amostra_suficiente": false,
-    "faltam_para_30": 23,
+    "faltam_para_30": 22,
     "veredicto": "aguarda amostra",
     "por_motivo": {
       "MM20": 1,
-      "planeada": 6
+      "planeada": 6,
+      "sem_motivo": 1
     }
   },
   "versao_atual": "v3"
