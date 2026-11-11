@@ -259,19 +259,19 @@ def seccao_runup(D, hoje, com_grafico=False):
     # chumbados com janela aberta agora ou a abrir nos proximos 7 dias
     # (so existem no JSON se o earnings_runup.py correr com --all)
     chumbados = sorted(
-        [c for c in cand if c.get("estado") == "FALHA" and d(c.get("T_minus_15"))
-         and d(c.get("T_minus_12")) and d(c["T_minus_12"]) >= hoje
-         and d(c["T_minus_15"]) <= hoje + timedelta(days=7)],
+        [c for c in cand if c.get("estado") == "FALHA" and d(c.get("janela_inicio"))
+         and d(c.get("janela_fim")) and d(c["janela_fim"]) >= hoje
+         and d(c["janela_inicio"]) <= hoje + timedelta(days=7)],
         key=lambda c: c.get("data_anuncio") or "")
     detidos = {t["ticker"] for t in trades}
     em_janela = [c for c in aprov if c.get("janela_aberta_hoje")]
     proximos = sorted(
-        [c for c in aprov if not c.get("janela_aberta_hoje") and d(c.get("T_minus_15"))
-         and hoje < d(c["T_minus_15"]) <= hoje + timedelta(days=7)],
-        key=lambda c: c["T_minus_15"])
+        [c for c in aprov if not c.get("janela_aberta_hoje") and d(c.get("janela_inicio"))
+         and hoje < d(c["janela_inicio"]) <= hoje + timedelta(days=7)],
+        key=lambda c: c["janela_inicio"])
 
     L.append(titulo("Earnings Run-up"))
-    L.append(nota(f"Compra cerca de 15 sessões antes dos resultados, venda obrigatória na véspera. "
+    L.append(nota(f"Compra 15 a 18 sessões antes dos resultados, venda obrigatória na véspera. "
                   f"Sistema {e(versao)}."))
 
     # --- placar ---
@@ -318,7 +318,7 @@ def seccao_runup(D, hoje, com_grafico=False):
                 crit.append(f"{e(sinal_pt(c['drawdown_52s_%']))} do máximo")
             if c.get("mov_historico_%") is not None:
                 crit.append(f"move {c['mov_historico_%']:.1f}% nos resultados".replace(".", ","))
-            crit.append("estimativas a subir e data confirmada (verificação manual)")
+            crit.append("estimativas a subir e data confirmada ou com padrão estável (verificação manual)")
             L.append(f'<div style="font-family:{MONO};font-size:12px;line-height:1.55;'
                      f'background:{LISTRA};padding:8px 10px;margin:0 0 6px;">'
                      f'<b>{e(t["ticker"])}</b> · {e(t.get("setor"))} · entrada {e(fdata(t.get("data_entrada")))}, '
@@ -392,7 +392,7 @@ def seccao_runup(D, hoje, com_grafico=False):
     if proximos:
         L.append(titulo("A abrir janela na próxima semana"))
         linhas = [[f"<b>{e(c['ticker'])}</b>",
-                   f"{e(fdata(c.get('T_minus_15')))} a {e(fdata(c.get('T_minus_12')))}",
+                   f"{e(fdata(c.get('janela_inicio')))} a {e(fdata(c.get('janela_fim')))}",
                    e(fdata(c.get("data_anuncio")))] for c in proximos[:8]]
         L.append(tabela(["Ação", "Janela de compra", "Resultados"], linhas))
         L.append(nota("Lista de observação, não de compra. Ainda falta a verificação manual."))
@@ -416,9 +416,55 @@ def seccao_runup(D, hoje, com_grafico=False):
     return {"linhas": L, "detidas": [t["ticker"] for t in abertos], "assunto": assunto}
 
 
+# ----------------------------------------------------------------------------
+# Seccao: Post-Earnings Drift (modo sombra, sem capital)
+# ----------------------------------------------------------------------------
+def seccao_pead(D, hoje, com_grafico=False):
+    P = D.get("pead")
+    if not P:
+        return {"linhas": [], "detidas": [], "assunto": []}
+    R = P.get("resumo") or {}
+    sinais = P.get("sinais") or []
+    semana_ini = hoje - timedelta(days=7)
+    novos = [s for s in sinais if d(s.get("data_entrada")) and d(s["data_entrada"]) > semana_ini]
+    fech = [s for s in sinais if s.get("estado") == "fechado"
+            and d(s.get("data_saida")) and d(s["data_saida"]) > semana_ini]
+    n = R.get("n_fechados", 0) or 0
+
+    L = [titulo("Post-Earnings Drift · em teste, sem capital"),
+         nota("Compra no fecho do dia em que o mercado reage a resultados claramente acima do esperado, "
+              "e mantém 20 sessões. Registo em modo sombra: nenhum destes sinais foi negociado.")]
+    if n:
+        L.append(cartoes([
+            ("Retorno médio", pct(R.get("retorno_medio_pct"), 2), cor_sinal(R.get("retorno_medio_pct")), "por sinal"),
+            ("Alfa médio", pct(R.get("alfa_medio_pct"), 2), cor_sinal(R.get("alfa_medio_pct")), "vs. S&P 500"),
+            ("Acerto", f"{R.get('taxa_acerto_pct') or 0:.0f}%", TINTA, f"{n} fechados"),
+            ("Em curso", str(R.get("n_abertos", 0)), TINTA, "sinais"),
+        ]))
+    L.append(barra(n))
+    L.append(nota(f"{n} de 30 sinais fechados."))
+    if novos:
+        L.append(tabela(["Sinal novo", "Surpresa", "Gap", "Entrada", "Stop a"],
+                        [[f"<b>{e(s['ticker'])}</b>", e(pct(s.get("surpresa_pct"), 0)), e(pct(s.get("gap_pct"))),
+                          e(fdata(s.get("data_entrada"))), e(f"−{s.get('dist_stop_pct') or 0:.1f}%")]
+                         for s in novos], alinhar_dir=(1, 2, 4)))
+    if fech:
+        L.append(tabela(["Fechado", "Motivo", "Retorno", "Alfa"],
+                        [[f"<b>{e(s['ticker'])}</b>", e("stop" if s.get("motivo_saida") == "stop" else "20 sessões"),
+                          f'<span style="color:{cor_sinal(s.get("retorno_pct"))}">{e(pct(s.get("retorno_pct")))}</span>',
+                          f'<span style="color:{cor_sinal(s.get("alfa_pct"))}">{e(pct(s.get("alfa_pct")))}</span>']
+                         for s in fech], alinhar_dir=(2, 3)))
+    if not novos and not fech:
+        L.append(nota("Sem sinais novos nem fechos esta semana."))
+    L.append(nota(f'Todos os sinais: <a href="{DASHBOARD_URL}pead.html" style="color:{TINTA};">'
+                  f'{DASHBOARD_URL}pead.html</a>'))
+    assunto = [f"PEAD: {len(novos)} sinal(is) novo(s)"] if novos else []
+    return {"linhas": L, "detidas": [], "assunto": assunto}
+
+
 # Para acrescentar estrategias: escreve seccao_fda(D, hoje, ...) / seccao_picks(...)
 # com a mesma assinatura e junta-as aqui.
-SECCOES = [seccao_runup]
+SECCOES = [seccao_runup, seccao_pead]
 
 
 # ----------------------------------------------------------------------------
@@ -429,7 +475,7 @@ def caixa_metodo(D):
     return (f'<div style="font-family:{MONO};font-size:11px;line-height:1.55;color:{FRACA};'
             f'border:1px solid {LINHA};padding:10px 12px;margin:16px 0 0;">'
             f'<b style="color:{TINTA};">O método em três linhas.</b> '
-            f'Compro ações do S&amp;P 500 cerca de 15 sessões antes dos resultados e vendo sempre na véspera '
+            f'Compro ações do S&amp;P 500 e S&amp;P 400 15 a 18 sessões antes dos resultados e vendo sempre na véspera '
             f'do anúncio: nunca atravesso os números. Só entram empresas em tendência de subida, '
             f'pouco voláteis (beta até {e(R.get("beta_max", 1.2))}) e com estimativas a ser revistas em alta. '
             f'Cada trade arrisca 0,5% da carteira; ao fim de 30 trades, se não bater o índice, o sistema é '
@@ -505,6 +551,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--json", default="dashboard.json")
     ap.add_argument("--out", default="newsletter.md")
+    ap.add_argument("--pead", default="pead.json",
+                    help="dados do PEAD em modo sombra (opcional)")
     ap.add_argument("--grafico", default="curva.png",
                     help="PNG da evolucao da estrategia (publicado no site; o email aponta para la)")
     ap.add_argument("--buttondown", action="store_true",
@@ -513,6 +561,9 @@ def main():
 
     with open(args.json, encoding="utf-8") as f:
         D = versao_publica(json.load(f))
+    if os.path.exists(args.pead):
+        with open(args.pead, encoding="utf-8") as f:
+            D["pead"] = json.load(f)
     hoje = d((D.get("meta") or {}).get("data_corrida")) or date.today()
 
     h = D.get("historico") or {}
