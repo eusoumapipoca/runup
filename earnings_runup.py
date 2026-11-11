@@ -3,11 +3,11 @@
 earnings_runup.py — Gerador de candidatos para a Estrategia 4 (run-up pre-resultados)
 
 Fluxo:
-  1. Universo base (S&P 500 por defeito, ou ficheiro de tickers)
+  1. Universo base (S&P 500 + S&P 400 por defeito, ou ficheiro de tickers)
   2. Calendario de resultados via Finnhub (janela futura configuravel)
   3. Precos via yfinance -> MM20/50/200, ATR(14), volume medio
   4. Gap na reacao ao ultimo anuncio
-  5. Datas T-15 / T-12 / SAIDA em sessoes de bolsa (calendario NYSE, feriados incluidos)
+  5. Datas de entrada (T-18 a T-15) / SAIDA em sessoes de bolsa (calendario NYSE, feriados incluidos)
   6. CSV pronto para o journal
 
 NAO substitui a verificacao manual da data na pagina de Investor Relations.
@@ -31,8 +31,11 @@ import pandas_market_calendars as mcal
 # ----------------------------------------------------------------------------
 # Parametros da estrategia
 # ----------------------------------------------------------------------------
-ENTRY_EARLY = 15          # T-15: inicio da janela de entrada
-ENTRY_LATE = 12           # T-12: fim da janela de entrada
+ENTRY_EARLY = 18          # T-18: inicio da janela de entrada (v4)
+ENTRY_LATE = 15           # T-15: fim da janela de entrada (v4)
+CONFIRMAR_ATE = 8         # v4: data nao confirmada ate T-8 -> sair
+TOL_PADRAO_SESSOES = 2    # v4: padrao de data 'estavel' se o ano anterior
+                          # (+52 semanas) cai a <= 2 sessoes da data atual
 MIN_AVG_VOLUME = 1_000_000
 MIN_PRICE = 10.0
 MAX_LAST_GAP_DOWN = -5.0  # gap negativo pior que isto elimina
@@ -49,7 +52,11 @@ MAX_DRAWDOWN_52S = 15.0   # % abaixo do maximo de 52 semanas; acima elimina.
 #                saida antecipada por 2 fechos abaixo da MM20
 #   v3 (set/26): tendencia de longo prazo (MM50 > MM200, preco > MM200) com
 #                recuo tolerado; sai a saida pela MM20 (dispararia no 1o dia)
-VERSAO_SISTEMA = "v3"
+#   v4 (nov/26): janela T-18..T-15 (era T-15..T-12); universo + S&P 400;
+#                data nao confirmada aceite se o padrao do ano anterior
+#                for estavel, com confirmacao obrigatoria ate T-8.
+#                Base: teste retrospetivo jul-nov/26 (backtest_runup.py).
+VERSAO_SISTEMA = "v4"
 ATR_STOP_MULT = 3.0      # stop a 3 ATR: em 15 sessoes, 1.2 ATR era tocado
                          # por ruido em ~55% dos casos; a 3.0 cai para ~20%
 MAX_BETA = 1.2           # default; ajustavel via --beta-max (99 desliga o filtro)
@@ -100,10 +107,11 @@ def compute_dates(earn_date: date, hour: str, sessions: list) -> dict:
         exit_note = "fecho da sessao anterior ao anuncio (BMO/DMH)"
 
     return {
-        "T_minus_15": sessions_before(earn_date, ENTRY_EARLY, sessions),
-        "T_minus_12": sessions_before(earn_date, ENTRY_LATE, sessions),
+        "janela_inicio": sessions_before(earn_date, ENTRY_EARLY, sessions),
+        "janela_fim": sessions_before(earn_date, ENTRY_LATE, sessions),
         "data_saida": exit_date,
         "nota_saida": exit_note,
+        "confirmar_ate": sessions_before(earn_date, CONFIRMAR_ATE, sessions),
     }
 
 
@@ -148,6 +156,52 @@ def load_universe(path: str = None) -> list:
 
     tickers = syms.astype(str).str.strip().str.replace(".", "-", regex=False)
     return sorted(set(tickers))
+
+
+SP400_WIKI = "https://en.wikipedia.org/wiki/List_of_S%26P_400_companies"
+
+
+def load_midcaps(path: str = "sp400.txt") -> list:
+    """
+    S&P 400 (v4). Wikipedia com User-Agent; se falhar, usa o ficheiro local
+    sp400.txt (um ticker por linha) se existir. Nunca interrompe a corrida:
+    sem midcaps, segue so com o S&P 500.
+    """
+    import io
+    import requests
+
+    try:
+        r = requests.get(SP400_WIKI, headers=UA, timeout=30)
+        r.raise_for_status()
+        for t in pd.read_html(io.StringIO(r.text)):
+            col = next((c for c in t.columns if str(c).lower() in ("symbol", "ticker symbol", "ticker")), None)
+            if col is not None:
+                tk = t[col].astype(str).str.strip().str.upper().str.replace(".", "-", regex=False)
+                return sorted(set(tk))
+        raise ValueError("tabela sem coluna Symbol")
+    except Exception as exc:
+        if os.path.exists(path):
+            with open(path) as f:
+                print(f"  S&P 400 via {path} (Wikipedia falhou: {exc})", file=sys.stderr)
+                return sorted({ln.strip().upper() for ln in f if ln.strip()})
+        print(f"  S&P 400 indisponivel ({exc}); segue so com o S&P 500", file=sys.stderr)
+        return []
+
+
+def padrao_data(earn: date, passadas: list, sessions: list) -> tuple:
+    """
+    v4: a data deste anuncio bate com o mesmo trimestre do ano anterior?
+    Devolve ('estavel'|'instavel'|'sem_historico', erro_em_sessoes).
+    No teste retrospetivo, a previsao pelo ano anterior acertou a <= 5
+    sessoes em 97% dos casos; a confirmacao ate T-8 cobre o resto.
+    """
+    alvo = earn - timedelta(days=364)
+    cands = [d for d in passadas if abs((d - alvo).days) <= 30]
+    if not cands:
+        return "sem_historico", None
+    prev = min(cands, key=lambda d: abs((d - alvo).days)) + timedelta(days=364)
+    erro = len([x for x in sessions if min(prev, earn) <= x < max(prev, earn)])
+    return ("estavel" if erro <= TOL_PADRAO_SESSOES else "instavel"), erro
 
 
 # ----------------------------------------------------------------------------
@@ -267,7 +321,7 @@ def last_gap_pct(df: pd.DataFrame, last_earn: date, hour: str) -> float:
     return max(cands, key=abs) if cands else None
 
 
-def past_earnings_via_yf(ticker: str, n: int = 5) -> list:
+def past_earnings_via_yf(ticker: str, n: int = 6) -> list:
     """
     Ate n datas de resultados ja divulgadas, da mais recente para tras.
     Fonte independente do Finnhub, cujo tier gratuito trunca o historico.
@@ -539,7 +593,9 @@ def ler_journal(caminho: str, fx: float) -> dict:
 
             trades.append({
                 "ticker": tk,
-                "versao_sistema": val(row, "versao_sistema"),
+                # "V3", " v3" ou "v3 " contam como v3; vazio fica sem versao
+                "versao_sistema": (str(val(row, "versao_sistema")).strip().lower() or None)
+                                  if val(row, "versao_sistema") is not None else None,
                 "setor": val(row, "setor"),
                 "beta": val(row, "beta"),
                 "data_entrada": d_ent.isoformat() if d_ent else None,
@@ -713,6 +769,10 @@ def escrever_json(args, out, today, funil, ultima_data, atraso, fx, fx_origem,
             "tendencia": "MM50 > MM200, preço > MM200",
             "saidas": "véspera do anúncio ou stop",
             "entrada_sessoes_antes": [ENTRY_EARLY, ENTRY_LATE],
+            "confirmar_data_ate_sessoes_antes": CONFIRMAR_ATE,
+            "data_nao_confirmada": "aceite se o padrão do ano anterior for estável; "
+                                   f"sai se não estiver confirmada até T-{CONFIRMAR_ATE}",
+            "universo": "S&P 500 + S&P 400",
             "beta_max": args.beta_max,
             "atr_mult_stop": args.atr_mult,
             "max_drawdown_52s_pct": MAX_DRAWDOWN_52S,
@@ -881,6 +941,8 @@ def main():
                     help="JSON do historico sem valores monetarios, para o repo publico")
     ap.add_argument("--exportar-historico", action="store_true",
                     help="escreve o historico.json a partir do journal e sai")
+    ap.add_argument("--sem-midcap", action="store_true",
+                    help="nao inclui o S&P 400 (v3 e anteriores so usavam o S&P 500)")
     ap.add_argument("--all", action="store_true",
                     help="inclui tambem os que falham filtros, com o motivo")
     args = ap.parse_args()
@@ -901,7 +963,13 @@ def main():
     sessions = trading_sessions(today - timedelta(days=500), end + timedelta(days=30))
 
     universe = load_universe(args.universe)
-    print(f"Universo: {len(universe)} tickers", file=sys.stderr)
+    origem_universo = {t: "SP500" for t in universe}
+    if not args.universe and not args.sem_midcap:
+        for t in load_midcaps():
+            origem_universo.setdefault(t, "SP400")
+        universe = sorted(origem_universo)
+    n400 = sum(1 for v in origem_universo.values() if v == "SP400")
+    print(f"Universo: {len(universe)} tickers (S&P 400: {n400})", file=sys.stderr)
 
     cal = fetch_calendar(args.token, today, end)
     if cal.empty:
@@ -944,10 +1012,10 @@ def main():
     n_lento = 0
     n_perto = sum(
         1 for _, rr in cal.iterrows()
-        if (lambda dd: dd["T_minus_15"] is not None
-                       and dd["T_minus_12"] is not None
-                       and dd["T_minus_12"] >= today
-                       and (dd["T_minus_15"] - today).days <= PRE_JANELA_DIAS)
+        if (lambda dd: dd["janela_inicio"] is not None
+                       and dd["janela_fim"] is not None
+                       and dd["janela_fim"] >= today
+                       and (dd["janela_inicio"] - today).days <= PRE_JANELA_DIAS)
            (compute_dates(rr["date"], rr.get("hour"), sessions))
     )
     print(f"Perto da janela (consulta lenta): {n_perto}", file=sys.stderr)
@@ -971,7 +1039,7 @@ def main():
         dd = t.get("drawdown_52s_%")
         if dd is not None and dd < -MAX_DRAWDOWN_52S:
             motivos.append("drawdown_52s")
-        if d["T_minus_15"] is None or d["data_saida"] is None:
+        if d["janela_inicio"] is None or d["data_saida"] is None:
             motivos.append("datas")
 
         b = beta_vs(df, bench)
@@ -985,13 +1053,14 @@ def main():
         gap = None
         mov_hist = None
         movs = []
+        padrao, erro_padrao = "nao_consultado", None
         reacao = "nao_aplicavel"
 
         perto = (
-            d["T_minus_15"] is not None
-            and d["T_minus_12"] is not None
-            and d["T_minus_12"] >= today                       # janela ainda nao fechou
-            and (d["T_minus_15"] - today).days <= PRE_JANELA_DIAS  # e abre em breve
+            d["janela_inicio"] is not None
+            and d["janela_fim"] is not None
+            and d["janela_fim"] >= today                       # janela ainda nao fechou
+            and (d["janela_inicio"] - today).days <= PRE_JANELA_DIAS  # e abre em breve
         )
 
         if not motivos and not perto:
@@ -1002,6 +1071,7 @@ def main():
             print(f"  [{n_lento}/{n_perto}] historico de {sym}...".ljust(58),
                   end="\r", file=sys.stderr, flush=True)
             datas = past_earnings_via_yf(sym)
+            padrao, erro_padrao = padrao_data(r["date"], datas, sessions)
             le, lh = last_map.get(sym, (None, None))
             if le is None and datas:
                 le, lh = datas[0], None
@@ -1016,18 +1086,22 @@ def main():
             reacao = "aplicados" if (gap is not None or mov_hist is not None) else "sem_dados"
 
         na_janela = (
-            d["T_minus_15"] is not None
-            and d["T_minus_15"] <= today <= d["T_minus_12"]
+            d["janela_inicio"] is not None
+            and d["janela_inicio"] <= today <= d["janela_fim"]
         )
 
         rows.append({
             "ticker": sym,
             "data_anuncio": r["date"],
             "hora": r.get("hour"),
-            "T_minus_15": d["T_minus_15"],
-            "T_minus_12": d["T_minus_12"],
+            "janela_inicio": d["janela_inicio"],
+            "janela_fim": d["janela_fim"],
             "data_saida": d["data_saida"],
             "nota_saida": d["nota_saida"],
+            "confirmar_ate": d["confirmar_ate"],
+            "padrao_data": padrao,
+            "erro_padrao_sessoes": erro_padrao,
+            "universo": origem_universo.get(sym, ""),
             "janela_aberta_hoje": na_janela,
             **t,
             "data_preco": df.index[-1].date(),
