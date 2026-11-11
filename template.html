@@ -172,8 +172,7 @@ footer a{color:var(--tinta-fraca)}
 <section>
   <h2>Janelas de entrada e saída</h2>
   <p class="sub">Cada barra é o intervalo em que se pode comprar. O losango marca a
-     venda obrigatória, na véspera da apresentação de resultados. Só aparecem janelas
-     abertas ou a abrir; ● marca uma posição em curso.</p>
+     venda obrigatória, na véspera da apresentação de resultados.</p>
   <div class="timeline" id="timeline"></div>
 </section>
 
@@ -260,9 +259,9 @@ const emJanela = aprovados.filter(c => c.janela_aberta_hoje);
   const abertas = new Set(((D.historico || {}).trades || [])
     .filter(t => !t.fechado && !t.data_saida_real).map(t => t.ticker));
   const relevantes = aprovados
-    .filter(c => c.T_minus_15 && c.data_saida)
-    .filter(c => c.T_minus_12 >= hoje || (abertas.has(c.ticker) && c.data_saida >= hoje))
-    .sort((p, q) => (p.T_minus_15 > q.T_minus_15) - (p.T_minus_15 < q.T_minus_15));
+    .filter(c => c.janela_inicio && c.data_saida)
+    .filter(c => c.janela_fim >= hoje || (abertas.has(c.ticker) && c.data_saida >= hoje))
+    .sort((p, q) => (p.janela_inicio > q.janela_inicio) - (p.janela_inicio < q.janela_inicio));
   const lista = relevantes.slice(0, 12);
   if (!lista.length) { alvo.innerHTML = `<div class="vazio">Sem janelas abertas ou a abrir nesta corrida.</div>`; return; }
   if (relevantes.length > lista.length) {
@@ -270,7 +269,7 @@ const emJanela = aprovados.filter(c => c.janela_aberta_hoje);
       `<p class="sub">Mais ${relevantes.length - lista.length} com janela mais tarde — ver a tabela completa.</p>`);
   }
 
-  const datas = lista.flatMap(c => [dt(c.T_minus_15), dt(c.data_saida)]).concat([dt(hoje)]);
+  const datas = lista.flatMap(c => [dt(c.janela_inicio), dt(c.data_saida)]).concat([dt(hoje)]);
   const min = new Date(Math.min(...datas)), max = new Date(Math.max(...datas));
   const pad = 3 * 864e5;
   const t0 = +min - pad, t1 = +max + pad;
@@ -298,7 +297,7 @@ const emJanela = aprovados.filter(c => c.janela_aberta_hoje);
 
   lista.forEach((c, i) => {
     const y = topo + i * H;
-    const a = x(+dt(c.T_minus_15)), b = x(+dt(c.T_minus_12)), f = x(+dt(c.data_saida));
+    const a = x(+dt(c.janela_inicio)), b = x(+dt(c.janela_fim)), f = x(+dt(c.data_saida));
     s += `<text class="tl-nome" x="0" y="${y + 15}">${esc(c.ticker)}${abertas.has(c.ticker) ? " ●" : ""}</text>`;
     s += `<line x1="${b}" y1="${y + 10}" x2="${f}" y2="${y + 10}"
            stroke="var(--linha-forte)" stroke-width="1" stroke-dasharray="2 3"/>`;
@@ -324,8 +323,8 @@ const emJanela = aprovados.filter(c => c.janela_aberta_hoje);
       É um resultado válido: a estratégia só paga por seleção, não por atividade.</div>`);
     return;
   }
-  sub.textContent = "Falta confirmar o Zacks Rank e a data na página de relação com investidores. "
-    + "Só depois disso é que um candidato é elegível.";
+  sub.textContent = "Falta confirmar o Zacks Rank. A data pode ainda não estar confirmada se o padrão "
+    + "do ano anterior for estável, mas tem de ser confirmada até à data indicada; se não for, sai-se.";
 
   el("fichas", `<div class="fichas">` + emJanela.map(c => {
     const dsaida = dias(hoje, c.data_saida);
@@ -333,6 +332,11 @@ const emJanela = aprovados.filter(c => c.janela_aberta_hoje);
     const linhas = [
       ["Anúncio", `${fdata(c.data_anuncio)} · ${(c.hora || "?").toUpperCase()}`],
       ["Saída obrigatória", fdata(c.data_saida)],
+      ["Data: padrão do ano anterior", c.padrao_data === "estavel" ? "estável"
+          : c.padrao_data === "instavel" ? `instável (${c.erro_padrao_sessoes} sessões) · só com data confirmada`
+          : "sem histórico · só com data confirmada"],
+      ["Confirmar data até", fdata(c.confirmar_ate)],
+      ["Índice", c.universo === "SP400" ? "S&P 400" : "S&P 500"],
       ["Distância ao stop", num(dim.distancia_stop_pct ?? c.distancia_stop_pct, 2, "%")],
       ["Beta", num(c.beta)],
       ["Queda desde o máximo", num(c["drawdown_52s_%"], 1, "%")],
@@ -534,7 +538,9 @@ const emJanela = aprovados.filter(c => c.janela_aberta_hoje);
     ["Versão do sistema", r.versao_sistema || "—"],
     ["Tendência", r.tendencia || "—"],
     ["Saída", r.saidas || "—"],
+    ["Universo", r.universo || "S&P 500"],
     ["Janela de entrada", r.entrada_sessoes_antes ? `T-${r.entrada_sessoes_antes[0]} a T-${r.entrada_sessoes_antes[1]}` : "—"],
+    ["Data não confirmada", r.data_nao_confirmada || "não aceite"],
     ["Stop", r.atr_mult_stop ? `${r.atr_mult_stop} × ATR(14)` : "—"],
     ["Beta máximo", num(r.beta_max)],
     ["Queda máxima desde o máximo de 52 semanas", num(r.max_drawdown_52s_pct, 0, "%")],
